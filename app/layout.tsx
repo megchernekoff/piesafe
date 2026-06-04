@@ -1,23 +1,26 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { ClerkProvider } from '@clerk/nextjs'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Plato — Meal Planning",
-  description: "Weekly meal planning, recipe library, and grocery lists",
-};
+  title: 'Pie Safe — Meal Planning',
+  description: "Your family's meal planning hub",
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>{children}</body>
-    </html>
-  );
+    <ClerkProvider>
+      <html lang="en">
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Nunito:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+          />
+        </head>
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
+  )
 }

@@ -1,23 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --sand: #f5f0e8;
-  --sand-dark: #e8e0d0;
-  --driftwood: #c4a882;
-  --tide: #7ba3a8;
-  --kelp: #4a6741;
-  --warm-white: #faf8f4;
-  --ink: #2a2520;
-  --ink-light: #6b6158;
-  --rust: #b85c38;
-  --cream: #f9f5ed;
+  --tan:          #e8dcc8;   /* page body background — obviously warm */
+  --linen:        #f0e8d6;   /* sidebar background */
+  --linen-dark:   #d6c9b2;   /* borders, dividers */
+  --parchment:    #fdf8f0;   /* card backgrounds */
+  --clay:         #c4956a;   /* warm terracotta accent */
+  --clay-dark:    #a87a52;
+  --sage:         #6b7b60;
+  --rosemary:     #4a5e42;   /* primary buttons, active nav */
+  --rosemary-dark:#3a4e34;
+  --lavender:     #a499be;
+  --lavender-soft:#ede9f5;
+  --ink:          #2c2218;
+  --ink-light:    #7a6a58;
+  --terracotta:   #a85030;
+  --warm-white:   #fdf8f0;   /* panel backgrounds */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background-color: var(--warm-white);
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--tan);
   color: var(--ink);
   min-height: 100vh;
 }
@@ -25,6 +30,8 @@ body {
 h1, h2, h3, .serif {
   font-family: 'Cormorant Garamond', Georgia, serif;
 }
+
+/* ── Layout ── */
 
 .app-shell {
   display: flex;
@@ -34,11 +41,12 @@ h1, h2, h3, .serif {
 .sidebar {
   width: 220px;
   min-height: 100vh;
-  background: var(--ink);
-  padding: 2rem 1.5rem;
+  background: var(--linen);
+  border-right: 1px solid var(--linen-dark);
+  padding: 2rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
   position: fixed;
   top: 0; left: 0;
   z-index: 10;
@@ -46,40 +54,47 @@ h1, h2, h3, .serif {
 
 .sidebar-logo {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.8rem;
-  font-weight: 300;
-  color: var(--sand);
-  letter-spacing: 0.05em;
+  font-size: 1.9rem;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: 0.02em;
   margin-bottom: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  line-height: 1;
 }
 
 .sidebar-logo span {
-  color: var(--driftwood);
+  color: var(--rosemary);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
+  gap: 0.7rem;
+  padding: 0.55rem 0.75rem;
   border-radius: 8px;
-  color: #9b9088;
+  color: var(--ink-light);
   font-size: 0.875rem;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   border: none;
   background: none;
   width: 100%;
   text-align: left;
+  font-family: 'Nunito', sans-serif;
 }
 
-.nav-item:hover { color: var(--sand); background: rgba(255,255,255,0.06); }
-.nav-item.active { color: var(--sand); background: rgba(196,168,130,0.2); }
-.nav-item.active svg { color: var(--driftwood); }
+.nav-item:hover {
+  color: var(--ink);
+  background: var(--linen-dark);
+}
+
+.nav-item.active {
+  color: var(--warm-white);
+  background: var(--rosemary);
+}
+
+.nav-item.active svg { color: var(--clay); }
 
 .main-content {
   margin-left: 220px;
@@ -88,62 +103,72 @@ h1, h2, h3, .serif {
   max-width: calc(100vw - 220px);
 }
 
-.page-header {
-  margin-bottom: 2rem;
-}
+/* ── Typography ── */
+
+.page-header { margin-bottom: 2rem; }
 
 .page-title {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 300;
   color: var(--ink);
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
 }
 
 .page-subtitle {
   color: var(--ink-light);
   font-size: 0.9rem;
   margin-top: 0.4rem;
+  font-style: italic;
 }
 
-/* Cards */
+/* ── Cards ── */
+
 .card {
-  background: white;
+  background: var(--parchment);
   border-radius: 12px;
-  border: 1px solid var(--sand-dark);
+  border: 1px solid var(--linen-dark);
   padding: 1.5rem;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 1px 4px rgba(100,80,50,0.06);
 }
 
-.card:hover { box-shadow: 0 4px 20px rgba(42,37,32,0.08); }
+.card:hover {
+  box-shadow: 0 4px 16px rgba(100,80,50,0.1);
+  border-color: var(--clay);
+}
 
-/* Buttons */
+/* ── Buttons ── */
+
 .btn-primary {
-  background: var(--ink);
-  color: var(--sand);
+  background: var(--rosemary);
+  color: var(--linen);
   border: none;
   padding: 0.65rem 1.4rem;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  letter-spacing: 0.01em;
 }
 
-.btn-primary:hover { background: #3d3630; }
+.btn-primary:hover { background: var(--rosemary-dark); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secondary {
   background: transparent;
   color: var(--ink);
-  border: 1px solid var(--sand-dark);
+  border: 1px solid var(--linen-dark);
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   display: inline-flex;
@@ -151,7 +176,10 @@ h1, h2, h3, .serif {
   gap: 0.5rem;
 }
 
-.btn-secondary:hover { background: var(--sand); border-color: var(--driftwood); }
+.btn-secondary:hover {
+  background: var(--linen);
+  border-color: var(--clay);
+}
 
 .btn-ghost {
   background: transparent;
@@ -165,46 +193,51 @@ h1, h2, h3, .serif {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  font-family: 'Nunito', sans-serif;
 }
 
-.btn-ghost:hover { background: var(--sand); color: var(--ink); }
+.btn-ghost:hover { background: var(--linen-dark); color: var(--ink); }
 
-/* Tag pill */
+/* ── Form elements ── */
+
 .tag {
   display: inline-block;
-  background: var(--sand);
-  color: var(--ink-light);
+  background: var(--lavender-soft);
+  color: #6b5e8a;
   font-size: 0.7rem;
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 20px;
   text-transform: lowercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
-/* Input */
 .input {
   width: 100%;
   padding: 0.65rem 0.9rem;
-  border: 1px solid var(--sand-dark);
+  border: 1px solid var(--linen-dark);
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'DM Sans', sans-serif;
-  background: white;
+  font-family: 'Nunito', sans-serif;
+  background: var(--parchment);
   color: var(--ink);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
 }
 
-.input:focus { border-color: var(--driftwood); }
+.input:focus {
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px rgba(107,123,96,0.12);
+}
 
 .textarea {
   width: 100%;
   padding: 0.65rem 0.9rem;
-  border: 1px solid var(--sand-dark);
+  border: 1px solid var(--linen-dark);
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'DM Sans', sans-serif;
-  background: white;
+  font-family: 'Nunito', sans-serif;
+  background: var(--parchment);
   color: var(--ink);
   transition: border-color 0.15s;
   outline: none;
@@ -212,17 +245,37 @@ h1, h2, h3, .serif {
   min-height: 80px;
 }
 
-.textarea:focus { border-color: var(--driftwood); }
+.textarea:focus { border-color: var(--sage); }
 
-/* Grid layouts */
-.recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
-.plan-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem; }
+.section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--clay);
+  margin-bottom: 0.75rem;
+}
 
-/* Day cell */
+/* ── Grid layouts ── */
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+/* ── Meal plan day cells ── */
+
 .day-cell {
-  background: white;
+  background: var(--parchment);
   border-radius: 10px;
-  border: 1px solid var(--sand-dark);
+  border: 1px solid var(--linen-dark);
   padding: 1rem 0.9rem;
   min-height: 160px;
   display: flex;
@@ -230,21 +283,26 @@ h1, h2, h3, .serif {
   gap: 0.5rem;
   cursor: pointer;
   transition: all 0.15s;
+  box-shadow: 0 1px 3px rgba(100,80,50,0.05);
 }
 
-.day-cell:hover { border-color: var(--driftwood); box-shadow: 0 2px 12px rgba(42,37,32,0.07); }
+.day-cell:hover {
+  border-color: var(--clay);
+  box-shadow: 0 3px 12px rgba(100,80,50,0.1);
+  transform: translateY(-1px);
+}
 
 .day-label {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ink-light);
+  letter-spacing: 0.12em;
+  color: var(--clay);
 }
 
 .day-meal-title {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   line-height: 1.3;
   color: var(--ink);
 }
@@ -253,21 +311,26 @@ h1, h2, h3, .serif {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background: #fef3e2;
-  color: #b26e00;
+  background: #fef0e2;
+  color: #9a5a1a;
   font-size: 0.65rem;
-  padding: 0.2rem 0.5rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
   border-radius: 20px;
 }
 
-/* Divider */
-.divider { border: none; border-top: 1px solid var(--sand-dark); margin: 1.5rem 0; }
+/* ── Utility ── */
 
-/* Loading spinner */
+.divider {
+  border: none;
+  border-top: 1px solid var(--linen-dark);
+  margin: 1.5rem 0;
+}
+
 .spinner {
   width: 20px; height: 20px;
-  border: 2px solid var(--sand-dark);
-  border-top-color: var(--driftwood);
+  border: 2px solid var(--linen-dark);
+  border-top-color: var(--clay);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
@@ -275,30 +338,41 @@ h1, h2, h3, .serif {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Grocery list */
+/* ── Grocery ── */
+
 .grocery-section { margin-bottom: 1.25rem; }
+
 .grocery-category {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--driftwood);
+  letter-spacing: 0.12em;
+  color: var(--clay);
   margin-bottom: 0.5rem;
 }
-.grocery-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.875rem; }
-.grocery-item input[type="checkbox"] { accent-color: var(--kelp); }
 
-/* Slide panel */
+.grocery-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.875rem;
+}
+
+.grocery-item input[type="checkbox"] { accent-color: var(--rosemary); }
+
+/* ── Slide panel ── */
+
 .panel-overlay {
   position: fixed; inset: 0;
-  background: rgba(42,37,32,0.4);
+  background: rgba(44,34,24,0.3);
   z-index: 100;
   display: flex;
   justify-content: flex-end;
 }
 
 .panel {
-  background: var(--warm-white);
+  background: var(--linen);
   width: 520px;
   max-width: 90vw;
   height: 100%;
@@ -308,54 +382,41 @@ h1, h2, h3, .serif {
   flex-direction: column;
   gap: 1rem;
   animation: slideIn 0.2s ease;
+  border-left: 1px solid var(--linen-dark);
 }
 
 @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-/* Empty state */
+/* ── Empty state ── */
+
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
   color: var(--ink-light);
 }
 
-.empty-state svg { margin: 0 auto 1rem; opacity: 0.3; display: block; }
-.empty-state h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--ink); }
+.empty-state svg { margin: 0 auto 1rem; opacity: 0.2; display: block; }
 
-/* Section label */
-.section-label {
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ink-light);
-  margin-bottom: 0.75rem;
+.empty-state h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+  color: var(--ink);
 }
 
-/* Email card */
-.email-card {
-  background: white;
-  border: 1px solid var(--sand-dark);
-  border-radius: 10px;
-  padding: 1.25rem;
-}
+/* ── Toast ── */
 
-.email-sender { font-size: 0.75rem; color: var(--tide); font-weight: 500; }
-.email-subject { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; margin: 0.2rem 0; }
-.email-snippet { font-size: 0.8rem; color: var(--ink-light); }
-.email-link { font-size: 0.8rem; color: var(--tide); text-decoration: none; display: block; margin-top: 0.3rem; }
-.email-link:hover { text-decoration: underline; }
-
-/* Toast */
 .toast {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  background: var(--ink);
-  color: var(--sand);
+  background: var(--rosemary);
+  color: var(--linen);
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-size: 0.875rem;
+  font-weight: 600;
   z-index: 999;
   animation: fadeUp 0.2s ease;
 }

@@ -1,56 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db, initDb } from "@/lib/db";
+import { auth } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
-  await initDb();
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q");
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (q) {
-    const rows = await db.execute({
-      sql: `SELECT * FROM recipes WHERE title LIKE ? OR tags LIKE ? OR description LIKE ? ORDER BY created_at DESC`,
-      args: [`%${q}%`, `%${q}%`, `%${q}%`],
-    });
-    return NextResponse.json(rows.rows);
-  }
+  const q = new URL(req.url).searchParams.get('q')
 
-  const rows = await db.execute(`SELECT * FROM recipes ORDER BY created_at DESC`);
-  return NextResponse.json(rows.rows);
-}
+  const result = q
+    ? await db.execute({
+        sql: `SELECT * FROM recipes WHERE user_id = ?
+              AND (title LIKE ? OR description LIKE ? OR tags LIKE ?)
+              ORDER BY created_at DESC`,
+        args: [userId, `%${q}%`, `%${q}%`, `%${q}%`],
+      })
+    : await db.execute({
+        sql: 'SELECT * FROM recipes WHERE user_id = ? ORDER BY created_at DESC',
+        args: [userId],
+      })
 
-export async function POST(req: NextRequest) {
-  await initDb();
-  const body = await req.json();
-  const {
-    title, description, ingredients, instructions,
-    prepTime, cookTime, servings, tags, sourceUrl, toddlerNotes, imageUrl
-  } = body;
-
-  const result = await db.execute({
-    sql: `INSERT INTO recipes (title, description, ingredients, instructions, prep_time, cook_time, servings, tags, source_url, toddler_notes, image_url)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      title,
-      description || "",
-      JSON.stringify(ingredients),
-      JSON.stringify(instructions),
-      prepTime || null,
-      cookTime || null,
-      servings || 4,
-      JSON.stringify(tags || []),
-      sourceUrl || null,
-      toddlerNotes || null,
-      imageUrl || null,
-    ],
-  });
-
-  return NextResponse.json({ id: result.lastInsertRowid });
+  return NextResponse.json(
+    result.rows.map(r => ({
+      ...r,
+      ingredients: JSON.parse((r.ingredients as string) || '[]'),
+      instructions: JSON.parse((r.instructions as string) || '[]'),
+      tags: JSON.parse((r.tags as string) || '[]'),
+    }))
+  )
 }
 
 export async function DELETE(req: NextRequest) {
-  await initDb();
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  await db.execute({ sql: `DELETE FROM recipes WHERE id = ?`, args: [id] });
-  return NextResponse.json({ success: true });
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  await db.execute({
+    sql: 'DELETE FROM recipes WHERE id = ? AND user_id = ?',
+    args: [id, userId],
+  })
+
+  return NextResponse.json({ success: true })
 }

@@ -1,105 +1,143 @@
-import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { db, initDb } from "@/lib/db";
-import { USER_PREFS } from "@/lib/prefs";
+import { auth } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+import { db } from '@/lib/db'
 
-const client = new Anthropic();
+const anthropic = new Anthropic()
+
+function extractJSON(text: string): string {
+  const block = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (block) return block[1]
+  const obj = text.match(/\{[\s\S]*\}/)
+  if (obj) return obj[0]
+  return text
+}
+
+function getMonday(dateStr: string): Date {
+  const d = new Date(dateStr + 'T12:00:00')
+  const day = d.getDay()
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
+  return d
+}
+
+export async function GET(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const weekStart = new URL(req.url).searchParams.get('weekStart')
+
+  const result = weekStart
+    ? await db.execute({
+        sql: 'SELECT * FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
+        args: [userId, weekStart],
+      })
+    : await db.execute({
+        sql: 'SELECT * FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+        args: [userId],
+      })
+
+  if (result.rows.length === 0) return NextResponse.json(null)
+
+  const row = result.rows[0]
+  return NextResponse.json({
+    id: row.id,
+    weekStart: row.week_start_date,
+    days: JSON.parse((row.meals as string) || '[]'),
+    grocery_list: JSON.parse((row.grocery_list as string) || '[]'),
+    prep_notes: JSON.parse((row.prep_notes as string) || '[]'),
+  })
+}
 
 export async function POST(req: NextRequest) {
-  await initDb();
-  const { weekStart, tweaks, savedRecipeIds } = await req.json();
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Optionally pull saved recipes for context
-  let savedRecipesContext = "";
-  if (savedRecipeIds?.length) {
-    const placeholders = savedRecipeIds.map(() => "?").join(",");
-    const rows = await db.execute({
-      sql: `SELECT title, ingredients, instructions, toddler_notes FROM recipes WHERE id IN (${placeholders})`,
-      args: savedRecipeIds,
-    });
-    if (rows.rows.length) {
-      savedRecipesContext = `\n\nThe user has requested these saved recipes be included:\n${rows.rows
-        .map((r) => `- ${r.title}`)
-        .join("\n")}`;
-    }
-  }
+  const { weekStart, tweaks } = await req.json()
+  if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
 
-  const prompt = `You are a meal planning assistant for a family in San Francisco.
+  const profileResult = await db.execute({
+    sql: 'SELECT * FROM profiles WHERE user_id = ?',
+    args: [userId],
+  })
+  const profile = profileResult.rows[0] ?? null
+  const dislikes: string[] = profile ? JSON.parse((profile.dislikes as string) || '[]') : []
+  const dietary: string[] = profile ? JSON.parse((profile.dietary_restrictions as string) || '[]') : []
+  const toddlerMode = profile?.toddler_mode === 1
+  const toddlerAge = profile?.toddler_age as number | null
+  const householdSize = (profile?.household_size as number) || 2
 
-User preferences:
-- Dislikes (NEVER include): ${USER_PREFS.dislikes.join(", ")}
-- Household: 2 adults + ${USER_PREFS.toddlerName} (${USER_PREFS.toddlerAge})
-- Notes: ${USER_PREFS.notes}
-${tweaks ? `\nSpecific requests for this week: ${tweaks}` : ""}
-${savedRecipesContext}
+  const monday = getMonday(weekStart)
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const days = DAY_NAMES.map((name, i) => {
+    const d = new Date(monday)
+    d.setDate(d.getDate() + i)
+    return { name, date: d.toISOString().split('T')[0] }
+  })
 
-Generate a full week meal plan (Monday–Sunday) with dinner for each night (optionally lunch 2-3 days).
+  const prompt = `Generate a 7-day dinner meal plan for a household of ${householdSize} people.
+${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
+${dislikes.length ? `Never use these ingredients: ${dislikes.join(', ')}.` : ''}
+${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
+${tweaks ? `Special requests: ${tweaks}` : ''}
 
-Respond ONLY with valid JSON in this exact structure:
+Week: ${days.map(d => `${d.name} ${d.date}`).join(', ')}.
+
+Return a JSON object:
 {
-  "weekStart": "${weekStart}",
   "days": [
     {
       "day": "Monday",
+      "date": "YYYY-MM-DD",
       "dinner": {
-        "title": "...",
-        "description": "...",
-        "ingredients": ["..."],
-        "instructions": ["..."],
-        "prepTime": 15,
-        "cookTime": 30,
-        "servings": 4,
-        "toddlerAdaptation": "...",
-        "tags": ["quick", "mediterranean"]
-      },
-      "lunch": null
+        "title": "Dish name",
+        "description": "One appetising sentence",
+        "prep_time": 15,
+        "cook_time": 30,
+        "servings": ${householdSize},
+        "ingredients": ["amount + ingredient", ...],
+        "instructions": ["Step 1", ...],
+        "toddler_notes": "How to adapt, or null",
+        "tags": ["tag", ...]
+      }
     }
   ],
-  "groceryList": {
-    "produce": ["..."],
-    "protein": ["..."],
-    "dairy": ["..."],
-    "pantry": ["..."],
-    "other": ["..."]
-  },
-  "prepNotes": [
-    "Sunday: Make the marinade for Tuesday's chicken...",
-    "..."
-  ]
-}`;
-
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8000,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-  const clean = text.replace(/```json|```/g, "").trim();
-  
-  let planData;
-  try {
-    planData = JSON.parse(clean);
-  } catch {
-    return NextResponse.json({ error: "Failed to parse plan", raw: text }, { status: 500 });
-  }
-
-  // Save to DB
-  const result = await db.execute({
-    sql: `INSERT INTO meal_plans (week_start, plan_data, grocery_list, prep_notes) VALUES (?, ?, ?, ?)`,
-    args: [
-      weekStart,
-      JSON.stringify(planData.days),
-      JSON.stringify(planData.groceryList),
-      JSON.stringify(planData.prepNotes),
-    ],
-  });
-
-  return NextResponse.json({ id: result.lastInsertRowid, ...planData });
+  "grocery_list": [
+    { "item": "name", "amount": "qty + unit", "category": "produce|protein|dairy|pantry|other" }
+  ],
+  "prep_notes": ["Ahead-of-time tip", ...]
 }
 
-export async function GET() {
-  await initDb();
-  const rows = await db.execute(`SELECT * FROM meal_plans ORDER BY created_at DESC LIMIT 20`);
-  return NextResponse.json(rows.rows);
+Make varied, delicious, practical meals. Return only valid JSON.`
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  let plan: { days: unknown[]; grocery_list: unknown[]; prep_notes: unknown[] }
+  try {
+    plan = JSON.parse(extractJSON((message.content[0] as { text: string }).text))
+  } catch {
+    return NextResponse.json({ error: 'Failed to parse meal plan from AI response.' }, { status: 500 })
+  }
+
+  // Replace any existing plan for this week
+  await db.execute({
+    sql: 'DELETE FROM meal_plans WHERE user_id = ? AND week_start_date = ?',
+    args: [userId, weekStart],
+  })
+  await db.execute({
+    sql: `INSERT INTO meal_plans (user_id, week_start_date, meals, grocery_list, prep_notes)
+          VALUES (?, ?, ?, ?, ?)`,
+    args: [
+      userId,
+      weekStart,
+      JSON.stringify(plan.days ?? []),
+      JSON.stringify(plan.grocery_list ?? []),
+      JSON.stringify(plan.prep_notes ?? []),
+    ],
+  })
+
+  return NextResponse.json({ weekStart, ...plan })
 }

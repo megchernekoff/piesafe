@@ -1,5 +1,5 @@
 {
-  "name": "mealplan",
+  "name": "pie-safe",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.0",
+    "@clerk/nextjs": "^7.4.2",
     "@libsql/client": "^0.17.3",
     "cheerio": "^1.2.0",
     "lucide-react": "^1.17.0",

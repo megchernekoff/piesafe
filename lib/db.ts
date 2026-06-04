@@ -1,51 +1,59 @@
-import { createClient } from "@libsql/client";
-import path from "path";
+import { createClient } from '@libsql/client'
 
-const dbPath = path.join(process.cwd(), "mealplan.db");
+if (!process.env.TURSO_DATABASE_URL) throw new Error('TURSO_DATABASE_URL is not set')
+if (!process.env.TURSO_AUTH_TOKEN) throw new Error('TURSO_AUTH_TOKEN is not set')
 
 export const db = createClient({
-  url: `file:${dbPath}`,
-});
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+})
 
-export async function initDb() {
+export async function initializeSchema() {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      user_id              TEXT    PRIMARY KEY,
+      display_name         TEXT,
+      household_size       INTEGER NOT NULL DEFAULT 2,
+      toddler_mode         INTEGER NOT NULL DEFAULT 0,
+      toddler_age          INTEGER,
+      dislikes             TEXT    NOT NULL DEFAULT '[]',
+      dietary_restrictions TEXT    NOT NULL DEFAULT '[]',
+      created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
   await db.execute(`
     CREATE TABLE IF NOT EXISTS recipes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT,
-      ingredients TEXT NOT NULL,
-      instructions TEXT NOT NULL,
-      prep_time INTEGER,
-      cook_time INTEGER,
-      servings INTEGER,
-      tags TEXT,
-      source_url TEXT,
+      id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id       TEXT NOT NULL,
+      title         TEXT NOT NULL,
+      description   TEXT,
+      ingredients   TEXT NOT NULL DEFAULT '[]',
+      instructions  TEXT NOT NULL DEFAULT '',
+      source_url    TEXT,
+      image_url     TEXT,
+      tags          TEXT NOT NULL DEFAULT '[]',
+      prep_time     INTEGER,
+      cook_time     INTEGER,
+      servings      INTEGER,
       toddler_notes TEXT,
-      image_url TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES profiles(user_id) ON DELETE CASCADE
     )
-  `);
-
+  `)
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_recipes_user ON recipes(user_id)`)
   await db.execute(`
     CREATE TABLE IF NOT EXISTS meal_plans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      week_start TEXT NOT NULL,
-      plan_data TEXT NOT NULL,
-      grocery_list TEXT,
-      prep_notes TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id         TEXT NOT NULL,
+      week_start_date TEXT NOT NULL,
+      meals           TEXT NOT NULL DEFAULT '{}',
+      grocery_list    TEXT NOT NULL DEFAULT '[]',
+      prep_notes      TEXT,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES profiles(user_id) ON DELETE CASCADE
     )
-  `);
-
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS email_recipes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      sender TEXT,
-      subject TEXT,
-      recipe_links TEXT,
-      raw_snippet TEXT,
-      email_date TEXT,
-      scanned_at TEXT DEFAULT (datetime('now'))
-    )
-  `);
+  `)
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_user ON meal_plans(user_id)`)
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_week ON meal_plans(user_id, week_start_date)`)
 }

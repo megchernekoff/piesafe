@@ -1,36 +1,65 @@
-# Plato — Meal Planning App
+# Pie Safe — Meal Planning App
 
 ## What this is
-A personal meal planning web app for Meg's household. Generates weekly dinner plans, maintains a recipe library, imports recipes from URLs, and surfaces recipe links from Gmail newsletters.
+A personal meal planning web app. Users set dietary preferences, maintain a recipe library, import recipes from URLs, and generate AI-powered weekly dinner plans with grocery lists and toddler adaptations.
 
 ## Stack
-- **Next.js 15** (App Router, TypeScript)
-- **libsql** (`@libsql/client`) — SQLite at `./mealplan.db`
+- **Next.js** (App Router, TypeScript)
+- **Clerk** (`@clerk/nextjs`) — auth, every user_id comes from Clerk
+- **Turso** (`@libsql/client`) — hosted libsql, env vars `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`
 - **Anthropic SDK** — meal plan generation + URL recipe parsing
-- **Gmail MCP** — email scanning feature
-- **Tailwind CSS**
+- **Tailwind CSS v4** + custom design system in `app/globals.css`
+- **lucide-react** — icons
 
 ## Running locally
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+cp .env.local.example .env.local  # fill in all keys
 npm install
 npm run dev
 # → http://localhost:3000
+# First run: POST /api/setup to initialize DB schema
 ```
 
-## Deploying
-`npm run build && npm start`
+## Deploying (Render)
+Set all env vars from `.env.local.example`. Run `POST /api/setup` once after first deploy.
 
-For cloud (Railway, Render, etc.): set `ANTHROPIC_API_KEY`. SQLite writes to local disk — fine for a VPS/container. For Vercel serverless, swap to a hosted Turso DB (same `@libsql/client` API, just change the URL in `lib/db.ts`).
+## Project structure
+```
+app/
+  (app)/           – authenticated route group (sidebar layout)
+    dashboard/
+    recipes/
+    plan/
+    preferences/
+  sign-in/[[...sign-in]]/
+  sign-up/[[...sign-up]]/
+  api/
+    preferences/   – GET/POST user profile
+    setup/         – POST to run schema init (once)
+  layout.tsx       – root layout with ClerkProvider
+  page.tsx         – public landing page
+components/
+  Sidebar.tsx      – client nav component
+lib/
+  db.ts            – Turso client + initializeSchema()
+proxy.ts           – Clerk auth (protects all routes except /, /sign-in, /sign-up)
+schema.sql         – canonical schema (reference copy)
+.env.local.example – all required env vars with instructions
+```
 
-## Customizing
-Edit `lib/prefs.ts` for dislikes, toddler name/age, email senders to scan.
+## Data model
+All rows are scoped to `user_id` (Clerk user ID, TEXT).
 
-## API Routes
-- `POST /api/meal-plan` — generate plan; `GET` retrieves history
-- `GET/POST/DELETE /api/recipes` — recipe library CRUD  
-- `POST /api/import-url` — scrape + parse a recipe from URL
-- `POST /api/email-scan` — Gmail scan; `GET` returns cached results
+| Table | Purpose |
+|-------|---------|
+| `profiles` | Preferences: household_size, toddler_mode, dislikes[], dietary_restrictions[] |
+| `recipes` | Per-user recipe library |
+| `meal_plans` | Generated weekly plans with grocery_list JSON |
 
-## Gmail MCP note
-Email scanning uses Anthropic MCP with the user's Gmail OAuth. Works out of the box in Claude Code with Gmail connected. For standalone deploy, you'd need your own OAuth.
+## Adding features
+- New authenticated page → add to `app/(app)/`, it gets sidebar + auth automatically
+- New API route → import `auth` from `@clerk/nextjs/server`, always check `userId`
+- New table → add to `lib/db.ts:initializeSchema()` and `schema.sql`
+
+## Design system
+CSS custom properties and utility classes are in `app/globals.css`. Key colors: `--ink`, `--sand`, `--driftwood`, `--tide`, `--kelp`. Fonts: Cormorant Garamond (headings), DM Sans (body).

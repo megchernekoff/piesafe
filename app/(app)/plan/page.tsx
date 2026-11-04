@@ -209,6 +209,7 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [savedToast, setSavedToast] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -229,6 +230,10 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
     })
     const data = await res.json()
     setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+    if (data.savedDislikes?.length > 0) {
+      setSavedToast(data.savedDislikes)
+      setTimeout(() => setSavedToast([]), 4000)
+    }
     setThinking(false)
   }
 
@@ -278,6 +283,12 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
             </div>
           )}
           <div ref={bottomRef} />
+        </div>
+      )}
+
+      {savedToast.length > 0 && (
+        <div style={{ background: 'var(--rosemary)', color: 'var(--linen)', borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+          ✓ Added to your dislikes: {savedToast.join(', ')} — future plans will avoid {savedToast.length === 1 ? 'it' : 'them'}.
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
 
@@ -22,9 +23,14 @@ ${mealSummary}
 
 ${plan.rationale ? `Why this plan was chosen: ${plan.rationale}` : ''}
 
-Help the user refine the plan. If they want to swap meals, suggest alternatives that fit their preferences. If they ask about ingredients or technique, answer helpfully. Be conversational and concise.
+Help the user refine the plan. If they want to swap meals, suggest alternatives. Be conversational and concise.
 
-When the user wants to make specific changes to the plan, summarise the changes clearly at the end of your message so they can use the "Regenerate with feedback" button.`
+IMPORTANT: If the user expresses a food dislike or aversion (e.g. "I don't like polenta", "no more mushrooms", "I hate cilantro", "avoid shellfish"), you must:
+1. Acknowledge it warmly in your reply
+2. Return a JSON block at the very end of your response in this exact format:
+<preferences>{"new_dislikes":["ingredient1","ingredient2"]}</preferences>
+
+Only include the <preferences> block if the user is genuinely expressing a dislike to remember. Do not include it for one-off meal swaps or general questions.`
 
   const messages = [
     ...(history || []),
@@ -38,5 +44,47 @@ When the user wants to make specific changes to the plan, summarise the changes 
     messages,
   })
 
-  return NextResponse.json({ reply: (response.content[0] as { text: string }).text })
+  const raw = (response.content[0] as { text: string }).text
+
+  // Extract any preference updates
+  const prefMatch = raw.match(/<preferences>([\s\S]*?)<\/preferences>/)
+  let newDislikes: string[] = []
+  let savedDislikes: string[] = []
+
+  if (prefMatch) {
+    try {
+      const parsed = JSON.parse(prefMatch[1])
+      newDislikes = parsed.new_dislikes ?? []
+    } catch { /* ignore */ }
+  }
+
+  // Save new dislikes to profile if any
+  if (newDislikes.length > 0) {
+    const profileResult = await db.execute({
+      sql: 'SELECT dislikes FROM profiles WHERE user_id = ?',
+      args: [userId],
+    })
+    const existing: string[] = profileResult.rows[0]
+      ? JSON.parse((profileResult.rows[0].dislikes as string) || '[]')
+      : []
+    const merged = Array.from(new Set([...existing, ...newDislikes.map(d => d.toLowerCase())]))
+
+    if (profileResult.rows.length > 0) {
+      await db.execute({
+        sql: 'UPDATE profiles SET dislikes = ?, updated_at = datetime(\'now\') WHERE user_id = ?',
+        args: [JSON.stringify(merged), userId],
+      })
+    } else {
+      await db.execute({
+        sql: 'INSERT INTO profiles (user_id, dislikes, dietary_restrictions) VALUES (?, ?, ?)',
+        args: [userId, JSON.stringify(merged), '[]'],
+      })
+    }
+    savedDislikes = newDislikes
+  }
+
+  // Strip the <preferences> block from the reply
+  const reply = raw.replace(/<preferences>[\s\S]*?<\/preferences>/, '').trim()
+
+  return NextResponse.json({ reply, savedDislikes })
 }

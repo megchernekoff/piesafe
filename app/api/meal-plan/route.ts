@@ -13,12 +13,6 @@ function extractJSON(text: string): string {
   return text
 }
 
-function getMonday(dateStr: string): Date {
-  const d = new Date(dateStr + 'T12:00:00')
-  const day = d.getDay()
-  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1))
-  return d
-}
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
@@ -84,13 +78,7 @@ export async function POST(req: NextRequest) {
       tags: JSON.parse((r.tags as string) || '[]') as string[],
     }))
 
-  const monday = getMonday(weekStart)
-  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-  const days = DAY_NAMES.slice(0, nights).map((name, i) => {
-    const d = new Date(monday)
-    d.setDate(d.getDate() + i)
-    return { name, date: d.toISOString().split('T')[0] }
-  })
+  const days = Array.from({ length: nights }, (_, i) => ({ name: `Day ${i + 1}` }))
 
   const savedRecipesBlock = savedRecipes.length > 0
     ? `\nThe user has these saved recipes in their recipe box — try to use some of them this week:\n${savedRecipes.map(r =>
@@ -104,15 +92,14 @@ ${dislikes.length ? `Never use these ingredients: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
 ${tweaks ? `Special requests: ${tweaks}` : ''}${savedRecipesBlock}
 
-Week: ${days.map(d => `${d.name} ${d.date}`).join(', ')}.
+Days: ${days.map(d => d.name).join(', ')}.
 
 Return a JSON object. Be concise — keep ingredients to one line each, instructions to one sentence each:
 {
   "rationale": "2-3 sentences explaining why you chose these meals — mention variety, any saved recipes used, how preferences were respected.",
   "days": [
     {
-      "day": "Monday",
-      "date": "YYYY-MM-DD",
+      "day": "Day 1",
       "dinner": {
         "title": "Dish name",
         "description": "One appetising sentence",

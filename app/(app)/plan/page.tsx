@@ -14,7 +14,7 @@ interface Dinner {
   tags: string[]
 }
 
-interface DayPlan { day: string; date: string; dinner: Dinner | null }
+interface DayPlan { day: string; dinner: Dinner | null }
 interface GroceryItem { item: string; amount: string; category: string }
 interface Plan {
   weekStart: string
@@ -149,8 +149,8 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
       <div className="panel" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginBottom: '0.25rem' }}>{day.day}</div>
             <h2 className="serif" style={{ fontSize: '2rem', fontWeight: 300, lineHeight: 1.1 }}>{d.title}</h2>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.2rem' }}>{day.day}</div>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
               {d.tags?.map(t => <span key={t} className="tag">{t}</span>)}
             </div>
@@ -460,7 +460,7 @@ export default function PlanPage() {
                 <div key={day.day} className="day-cell"
                   onClick={() => day.dinner && setSelectedDay(day)}
                   style={{ cursor: day.dinner ? 'pointer' : 'default' }}>
-                  <div className="day-label">{day.day.slice(0, 3)}</div>
+                  <div className="day-label">{day.day}</div>
                   {day.dinner ? (
                     <>
                       <div className="day-meal-title">{day.dinner.title}</div>

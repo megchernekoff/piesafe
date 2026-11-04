@@ -68,6 +68,16 @@ export async function initializeSchema() {
     )
   `)
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS gmail_providers (
+      id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id    TEXT NOT NULL,
+      domain     TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, domain)
+    )
+  `)
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS email_digests (
       id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
       user_id    TEXT NOT NULL,

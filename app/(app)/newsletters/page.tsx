@@ -1,8 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search } from 'lucide-react'
+import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, Trash2 } from 'lucide-react'
 
 interface Provider { name: string; domain: string; keywords: string[] }
+interface SavedProvider { name: string; domain: string }
 interface DigestRecipe { title: string; description: string }
 interface Digest {
   id: string
@@ -16,7 +17,7 @@ interface Digest {
 
 const SUPPORTED_PROVIDERS: Provider[] = [
   { name: 'NYT Cooking',        domain: 'nytimes.com',          keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
-  { name: 'Serious Eats',       domain: 'seriouseats.com',       keywords: ['serious eats', 'seriouseats'] },
+  { name: 'Serious Eats',       domain: 'seriouseats.com',       keywords: ['serious eats'] },
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            keywords: ['food52'] },
   { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  keywords: ['half baked harvest'] },
@@ -45,30 +46,34 @@ function senderName(from: string): string {
 export default function NewslettersPage() {
   const [connected, setConnected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savedProviders, setSavedProviders] = useState<SavedProvider[]>([])
   const [digests, setDigests] = useState<Digest[]>([])
   const [selected, setSelected] = useState<Record<string, number[]>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [savedIds, setSavedIds] = useState<string[]>([])
-  const [scanning, setScanning] = useState<string | null>(null) // domain being scanned
+  const [scanning, setScanning] = useState<string | null>(null)
   const [toast, setToast] = useState('')
-
-  // Search input state
   const [query, setQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const matches = matchProviders(query)
-  const hasExactMatch = matches.length > 0
-  const isTyping = query.trim().length > 0
+  const hasMatch = matches.length > 0
 
   useEffect(() => {
-    fetch('/api/gmail/scan')
-      .then(r => r.json())
-      .then(data => {
-        if (!Array.isArray(data)) setConnected(null)
-        else { setConnected('connected'); setDigests(data) }
-      })
-      .catch(() => setConnected(null))
+    // Check Gmail connection + load existing digests and saved providers
+    Promise.all([
+      fetch('/api/gmail/scan').then(r => r.json()),
+      fetch('/api/gmail/providers').then(r => r.json()),
+    ]).then(([scanData, providerData]) => {
+      if (!Array.isArray(scanData)) {
+        setConnected(null)
+      } else {
+        setConnected('connected')
+        setDigests(scanData)
+        setSavedProviders(Array.isArray(providerData) ? providerData : [])
+      }
+    }).catch(() => setConnected(null))
       .finally(() => setLoading(false))
 
     const params = new URLSearchParams(window.location.search)
@@ -82,14 +87,31 @@ export default function NewslettersPage() {
     }
   }, [])
 
-  async function scanProvider(provider: Provider) {
+  async function addProvider(provider: Provider) {
     setQuery('')
     setShowDropdown(false)
-    setScanning(provider.domain)
+    // Save to DB
+    await fetch('/api/gmail/providers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain: provider.domain, name: provider.name }),
+    })
+    setSavedProviders(prev =>
+      prev.find(p => p.domain === provider.domain) ? prev : [...prev, { name: provider.name, domain: provider.domain }]
+    )
+  }
+
+  async function removeProvider(domain: string) {
+    await fetch(`/api/gmail/providers?domain=${encodeURIComponent(domain)}`, { method: 'DELETE' })
+    setSavedProviders(prev => prev.filter(p => p.domain !== domain))
+  }
+
+  async function scanProvider(domain: string, name: string) {
+    setScanning(domain)
     const res = await fetch('/api/gmail/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain: provider.domain, providerName: provider.name }),
+      body: JSON.stringify({ domain, providerName: name }),
     })
     const data = await res.json()
     if (data.error) {
@@ -101,8 +123,8 @@ export default function NewslettersPage() {
         const fresh = newDigests.filter(d => !existingIds.includes(d.gmail_id))
         return [...fresh, ...prev]
       })
-      if (newDigests.length === 0) setToast(`No recent ${provider.name} emails found in your inbox.`)
-      else setToast(`Found ${newDigests.length} ${provider.name} newsletter${newDigests.length > 1 ? 's' : ''}!`)
+      if (newDigests.length === 0) setToast(`No recent ${name} emails found.`)
+      else setToast(`Found ${newDigests.length} ${name} newsletter${newDigests.length > 1 ? 's' : ''}!`)
     }
     setScanning(null)
     setTimeout(() => setToast(''), 4000)
@@ -112,6 +134,7 @@ export default function NewslettersPage() {
     await fetch('/api/gmail/disconnect', { method: 'POST' })
     setConnected(null)
     setDigests([])
+    setSavedProviders([])
     setSelected({})
     setSavedIds([])
   }
@@ -160,11 +183,9 @@ export default function NewslettersPage() {
       {!connected ? (
         <div className="card" style={{ maxWidth: '480px' }}>
           <Mail size={28} style={{ color: 'var(--ochre)', marginBottom: '1rem' }} />
-          <h3 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300, marginBottom: '0.5rem' }}>
-            Connect your Gmail
-          </h3>
+          <h3 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300, marginBottom: '0.5rem' }}>Connect your Gmail</h3>
           <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', lineHeight: 1.65, marginBottom: '1.25rem' }}>
-            Search for a newsletter you subscribe to and we&apos;ll pull the recipes from it.
+            Search for newsletters you subscribe to — we&apos;ll pull the recipes from them.
             Read-only access. You choose what gets saved.
           </p>
           <a href="/api/gmail/connect">
@@ -172,39 +193,38 @@ export default function NewslettersPage() {
           </a>
         </div>
       ) : (
-        <>
-          {/* Provider search */}
-          <div style={{ maxWidth: '480px', marginBottom: '2rem', position: 'relative' }}>
-            <div className="section-label" style={{ marginBottom: '0.6rem' }}>Search for a newsletter</div>
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-light)', pointerEvents: 'none' }} />
-              <input
-                ref={inputRef}
-                className="input"
-                style={{ paddingLeft: '2rem' }}
-                placeholder="e.g. NYT Cooking, Serious Eats, Bon Appétit…"
-                value={query}
-                onChange={e => { setQuery(e.target.value); setShowDropdown(true) }}
-                onFocus={() => setShowDropdown(true)}
-                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+          {/* Add newsletter search */}
+          <div style={{ maxWidth: '480px', position: 'relative' }}>
+            <div className="section-label" style={{ marginBottom: '0.6rem' }}>Add a newsletter to follow</div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-light)', pointerEvents: 'none' }} />
+                <input
+                  ref={inputRef}
+                  className="input"
+                  style={{ paddingLeft: '2rem' }}
+                  placeholder="e.g. NYT Cooking, Serious Eats…"
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setShowDropdown(true) }}
+                  onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                />
+              </div>
             </div>
 
-            {/* Dropdown */}
-            {showDropdown && (
+            {showDropdown && query.trim() && (
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--parchment)', border: '1px solid var(--stone-dark)', borderRadius: 8, boxShadow: '0 4px 16px rgba(44,30,16,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
-                {hasExactMatch ? (
-                  matches.map(p => (
-                    <button key={p.domain}
-                      onMouseDown={() => scanProvider(p)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.7rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ink)', textAlign: 'left', fontFamily: 'Nunito, sans-serif' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                      <span>{p.name}</span>
-                      {scanning === p.domain && <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite', color: 'var(--lavender)' }} />}
-                    </button>
-                  ))
-                ) : (
+                {hasMatch ? matches.map(p => (
+                  <button key={p.domain} onMouseDown={() => addProvider(p)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.7rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--ink)', textAlign: 'left', fontFamily: 'Nunito, sans-serif' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                    <span>{p.name}</span>
+                    <Plus size={13} style={{ color: 'var(--lavender)', opacity: 0.7 }} />
+                  </button>
+                )) : (
                   <div style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
                     &ldquo;{query}&rdquo; isn&apos;t available yet — check back soon!
                   </div>
@@ -213,84 +233,105 @@ export default function NewslettersPage() {
             )}
           </div>
 
-          {/* Supported providers hint */}
-          {!isTyping && digests.length === 0 && (
-            <div style={{ maxWidth: '480px', marginBottom: '2rem' }}>
-              <div className="section-label" style={{ marginBottom: '0.6rem' }}>Supported newsletters</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {SUPPORTED_PROVIDERS.map(p => (
-                  <button key={p.domain} className="btn-secondary"
-                    onClick={() => scanProvider(p)}
-                    disabled={scanning === p.domain}
-                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.75rem' }}>
-                    {scanning === p.domain
-                      ? <Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} />
-                      : p.name}
-                  </button>
+          {/* Saved providers list */}
+          {savedProviders.length > 0 && (
+            <div style={{ maxWidth: '640px' }}>
+              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Your newsletters</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {savedProviders.map(p => (
+                  <div key={p.domain} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'var(--parchment)', borderRadius: 10, border: '1px solid var(--stone-dark)' }}>
+                    <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600 }}>{p.name}</span>
+                    <button className="btn-secondary" onClick={() => scanProvider(p.domain, p.name)}
+                      disabled={scanning === p.domain}
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}>
+                      {scanning === p.domain
+                        ? <><Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> Scanning…</>
+                        : 'Scan inbox'}
+                    </button>
+                    <button className="btn-ghost" onClick={() => removeProvider(p.domain)}
+                      style={{ padding: '0.35rem', color: 'var(--ink-light)', opacity: 0.5 }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
+          {savedProviders.length === 0 && digests.length === 0 && (
+            <div className="empty-state">
+              <Mail size={40} />
+              <h3>No newsletters yet</h3>
+              <p>Search for a newsletter above to get started.</p>
+            </div>
+          )}
+
           {/* Disconnect */}
-          <button className="btn-ghost" onClick={disconnect} style={{ color: 'var(--ink-light)', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
-            <Unlink size={12} /> Disconnect Gmail
-          </button>
-
-          {/* Results */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '680px' }}>
-            {digests.map(digest => {
-              const isSaved = savedIds.includes(digest.gmail_id) || digest.saved === 1
-              const selectedIndices = selected[digest.gmail_id] ?? []
-              return (
-                <div key={digest.gmail_id} className="card" style={{ opacity: isSaved ? 0.7 : 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ochre)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
-                        {senderName(digest.sender)}
-                      </div>
-                      <div className="serif" style={{ fontSize: '1.1rem', fontWeight: 400 }}>{digest.subject}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--ink-light)', marginTop: '0.15rem' }}>
-                        {new Date(digest.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </div>
-                    </div>
-                    {isSaved
-                      ? <span style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Saved</span>
-                      : <button className="btn-ghost" onClick={() => toggleAll(digest)} style={{ fontSize: '0.75rem' }}>
-                          {selectedIndices.length === digest.summary.length ? 'Deselect all' : 'Select all'}
-                        </button>}
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {digest.summary.map((recipe, i) => (
-                      <label key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: isSaved ? 'default' : 'pointer', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
-                        {!isSaved && (
-                          <input type="checkbox" checked={selectedIndices.includes(i)}
-                            onChange={() => toggleRecipe(digest.gmail_id, i)}
-                            style={{ marginTop: '0.2rem', accentColor: 'var(--lavender)' }} />
-                        )}
-                        <div>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
-                          {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-
-                  {!isSaved && selectedIndices.length > 0 && (
-                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--stone-dark)' }}>
-                      <button className="btn-primary" onClick={() => saveSelected(digest)} disabled={saving === digest.gmail_id} style={{ fontSize: '0.82rem' }}>
-                        {saving === digest.gmail_id
-                          ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
-                          : <><BookmarkPlus size={13} /> Save {selectedIndices.length} recipe{selectedIndices.length > 1 ? 's' : ''} to Recipe Box</>}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <div>
+            <button className="btn-ghost" onClick={disconnect} style={{ color: 'var(--ink-light)', fontSize: '0.8rem' }}>
+              <Unlink size={12} /> Disconnect Gmail
+            </button>
           </div>
-        </>
+
+          {/* Digest results */}
+          {digests.length > 0 && (
+            <div style={{ maxWidth: '680px' }}>
+              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Recent newsletters</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {digests.map(digest => {
+                  const isSaved = savedIds.includes(digest.gmail_id) || digest.saved === 1
+                  const selectedIndices = selected[digest.gmail_id] ?? []
+                  return (
+                    <div key={digest.gmail_id} className="card" style={{ opacity: isSaved ? 0.7 : 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ochre)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
+                            {senderName(digest.sender)}
+                          </div>
+                          <div className="serif" style={{ fontSize: '1.1rem', fontWeight: 400 }}>{digest.subject}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--ink-light)', marginTop: '0.15rem' }}>
+                            {new Date(digest.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </div>
+                        {isSaved
+                          ? <span style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Saved</span>
+                          : <button className="btn-ghost" onClick={() => toggleAll(digest)} style={{ fontSize: '0.75rem' }}>
+                              {selectedIndices.length === digest.summary.length ? 'Deselect all' : 'Select all'}
+                            </button>}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {digest.summary.map((recipe, i) => (
+                          <label key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: isSaved ? 'default' : 'pointer', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
+                            {!isSaved && (
+                              <input type="checkbox" checked={selectedIndices.includes(i)}
+                                onChange={() => toggleRecipe(digest.gmail_id, i)}
+                                style={{ marginTop: '0.2rem', accentColor: 'var(--lavender)' }} />
+                            )}
+                            <div>
+                              <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
+                              {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      {!isSaved && selectedIndices.length > 0 && (
+                        <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--stone-dark)' }}>
+                          <button className="btn-primary" onClick={() => saveSelected(digest)} disabled={saving === digest.gmail_id} style={{ fontSize: '0.82rem' }}>
+                            {saving === digest.gmail_id
+                              ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
+                              : <><BookmarkPlus size={13} /> Save {selectedIndices.length} recipe{selectedIndices.length > 1 ? 's' : ''} to Recipe Box</>}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

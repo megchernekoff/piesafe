@@ -3,6 +3,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 import { db } from '@/lib/db'
 
+function titleFromUrl(url: string): string {
+  try {
+    const pathname = new URL(url).pathname
+    const slug = pathname.split('/').filter(Boolean).pop() || ''
+    if (slug && !/^\d+$/.test(slug)) {
+      return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    }
+    // Slug is just a number (e.g. /recipe/12345/name/) — try second-to-last
+    const parts = pathname.split('/').filter(Boolean)
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!/^\d+$/.test(parts[i])) {
+        return parts[i].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      }
+    }
+  } catch { /* fall through */ }
+  return 'Saved recipe'
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -10,8 +28,8 @@ export async function POST(req: NextRequest) {
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 })
 
-  // Try to fetch the page title — fall back gracefully if blocked
-  let title = 'Saved recipe'
+  // Try to fetch the page title — fall back to slug from URL
+  let title = titleFromUrl(url)
   try {
     const res = await fetch(url, {
       headers: {
@@ -22,17 +40,10 @@ export async function POST(req: NextRequest) {
     })
     const html = await res.text()
     const $ = cheerio.load(html)
-    // Try og:title first (cleaner), then <title>
     const ogTitle = $('meta[property="og:title"]').attr('content')
     const pageTitle = $('title').text().replace(/\s*[-|].*$/, '').trim()
-    title = ogTitle || pageTitle || 'Saved recipe'
-  } catch {
-    // Can't fetch the page — save with URL-derived title
-    try {
-      const hostname = new URL(url).hostname.replace('www.', '')
-      title = `Recipe from ${hostname}`
-    } catch { /* use default */ }
-  }
+    title = ogTitle || pageTitle || title
+  } catch { /* keep URL-derived title */ }
 
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags)

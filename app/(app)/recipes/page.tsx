@@ -58,19 +58,29 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
           </div>
         )}
 
-        <div>
-          <div className="section-label">Ingredients</div>
-          <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-            {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
-          </ul>
-        </div>
+        {recipe.ingredients.length > 0 && (
+          <div>
+            <div className="section-label">Ingredients</div>
+            <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+              {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+            </ul>
+          </div>
+        )}
 
-        <div>
-          <div className="section-label">Instructions</div>
-          <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
-            {recipe.instructions.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
-          </ol>
-        </div>
+        {recipe.instructions.length > 0 && (
+          <div>
+            <div className="section-label">Instructions</div>
+            <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
+              {recipe.instructions.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
+            </ol>
+          </div>
+        )}
+
+        {recipe.ingredients.length === 0 && recipe.source_url && (
+          <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
+            Full recipe at the source link below.
+          </p>
+        )}
 
         {recipe.source_url && (
           <a href={recipe.source_url} target="_blank" rel="noopener"

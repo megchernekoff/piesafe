@@ -38,8 +38,57 @@ export async function GET(req: NextRequest) {
     weekStart: row.week_start_date,
     days: JSON.parse((row.meals as string) || '[]'),
     grocery_list: JSON.parse((row.grocery_list as string) || '[]'),
+    grocery_custom: JSON.parse((row.grocery_custom as string) || '[]'),
+    grocery_checked: JSON.parse((row.grocery_checked as string) || '[]'),
     prep_notes: JSON.parse((row.prep_notes as string) || '[]'),
   })
+}
+
+export async function PATCH(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { weekStart, action, item, key } = await req.json()
+  if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
+
+  const result = await db.execute({
+    sql: 'SELECT grocery_custom, grocery_checked FROM meal_plans WHERE user_id = ? AND week_start_date = ?',
+    args: [userId, weekStart],
+  })
+  if (result.rows.length === 0) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+
+  const row = result.rows[0]
+  const custom: { item: string; amount: string; category: string }[] = JSON.parse((row.grocery_custom as string) || '[]')
+  const checked: string[] = JSON.parse((row.grocery_checked as string) || '[]')
+
+  if (action === 'add') {
+    custom.push({ item: item.item, amount: item.amount || '', category: item.category || 'other' })
+    await db.execute({
+      sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE user_id = ? AND week_start_date = ?',
+      args: [JSON.stringify(custom), userId, weekStart],
+    })
+  } else if (action === 'check') {
+    // key is "cat-idx" for generated items or "custom-idx" for custom items
+    if (!checked.includes(key)) checked.push(key)
+    await db.execute({
+      sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE user_id = ? AND week_start_date = ?',
+      args: [JSON.stringify(checked), userId, weekStart],
+    })
+  } else if (action === 'uncheck') {
+    const next = checked.filter(k => k !== key)
+    await db.execute({
+      sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE user_id = ? AND week_start_date = ?',
+      args: [JSON.stringify(next), userId, weekStart],
+    })
+  } else if (action === 'remove-custom') {
+    const next = custom.filter((_, i) => `custom-${i}` !== key)
+    await db.execute({
+      sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE user_id = ? AND week_start_date = ?',
+      args: [JSON.stringify(next), userId, weekStart],
+    })
+  }
+
+  return NextResponse.json({ success: true })
 }
 
 export async function POST(req: NextRequest) {

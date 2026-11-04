@@ -50,6 +50,8 @@ export async function initializeSchema() {
       week_start_date TEXT NOT NULL,
       meals           TEXT NOT NULL DEFAULT '{}',
       grocery_list    TEXT NOT NULL DEFAULT '[]',
+      grocery_custom  TEXT NOT NULL DEFAULT '[]',
+      grocery_checked TEXT NOT NULL DEFAULT '[]',
       prep_notes      TEXT,
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES profiles(user_id) ON DELETE CASCADE

@@ -21,6 +21,8 @@ interface Plan {
   rationale?: string
   days: DayPlan[]
   grocery_list: GroceryItem[]
+  grocery_custom: GroceryItem[]
+  grocery_checked: string[]
   prep_notes: string[]
 }
 
@@ -321,6 +323,101 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
 
 const CATEGORY_ORDER = ['produce', 'protein', 'dairy', 'pantry', 'other']
 
+function GroceryView({ plan, weekStart, onPlanUpdate }: { plan: Plan; weekStart: string; onPlanUpdate: (p: Plan) => void }) {
+  const [newItem, setNewItem] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const checkedKeys = plan.grocery_checked ?? []
+  const customItems = plan.grocery_custom ?? []
+
+  async function patchGrocery(action: string, payload: Record<string, unknown>) {
+    await fetch('/api/meal-plan', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekStart, action, ...payload }),
+    })
+  }
+
+  async function handleCheck(key: string, currentlyChecked: boolean) {
+    const action = currentlyChecked ? 'uncheck' : 'check'
+    onPlanUpdate({ ...plan, grocery_checked: currentlyChecked ? checkedKeys.filter(k => k !== key) : [...checkedKeys, key] })
+    await patchGrocery(action, { key })
+  }
+
+  async function addItem() {
+    const text = newItem.trim()
+    if (!text) return
+    setAdding(true)
+    const item = { item: text, amount: '', category: 'other' }
+    onPlanUpdate({ ...plan, grocery_custom: [...customItems, item] })
+    setNewItem('')
+    await patchGrocery('add', { item })
+    setAdding(false)
+  }
+
+  const grouped: Record<string, { item: GroceryItem; key: string }[]> = {}
+  plan.grocery_list.forEach((item, i) => {
+    const cat = item.category || 'other'
+    const key = `${cat}-${i}`;
+    (grouped[cat] = grouped[cat] || []).push({ item, key })
+  })
+
+  return (
+    <div style={{ maxWidth: '560px' }}>
+      <div className="card">
+        <h3 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300, marginBottom: '1.25rem' }}>Grocery List</h3>
+
+        {CATEGORY_ORDER.filter(cat => grouped[cat]?.length).map(cat => (
+          <div key={cat} className="grocery-section">
+            <div className="grocery-category">{cat}</div>
+            {grouped[cat].filter(({ key }) => !checkedKeys.includes(key)).map(({ item, key }) => (
+              <label key={key} className="grocery-item" style={{ cursor: 'pointer' }}>
+                <input type="checkbox" checked={false}
+                  onChange={() => handleCheck(key, false)} />
+                <span>{item.amount} {item.item}</span>
+              </label>
+            ))}
+          </div>
+        ))}
+
+        {customItems.length > 0 && (
+          <div className="grocery-section">
+            <div className="grocery-category">added by me</div>
+            {customItems.map((item, i) => {
+              const key = `custom-${i}`
+              const isChecked = checkedKeys.includes(key)
+              if (isChecked) return null
+              return (
+                <label key={key} className="grocery-item" style={{ cursor: 'pointer' }}>
+                  <input type="checkbox" checked={false}
+                    onChange={() => handleCheck(key, false)} />
+                  <span>{item.amount ? `${item.amount} ` : ''}{item.item}</span>
+                </label>
+              )
+            })}
+          </div>
+        )}
+
+        <hr className="divider" />
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input className="input"
+            value={newItem}
+            onChange={e => setNewItem(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addItem()}
+            placeholder="Add an item…"
+            style={{ flex: 1, fontSize: '0.875rem' }}
+          />
+          <button className="btn-secondary" onClick={addItem} disabled={adding || !newItem.trim()}
+            style={{ fontSize: '0.82rem', padding: '0.6rem 1rem' }}>
+            {adding ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : '+ Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PlanPage() {
   const [weekStart, setWeekStart] = useState(getMonday)
   const [nights, setNights] = useState(7)
@@ -332,7 +429,7 @@ export default function PlanPage() {
     : 'plan'
   const [view, setView] = useState<'plan' | 'grocery' | 'prep'>(initialTab)
   const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null)
-  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [, setChecked] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch(`/api/meal-plan?weekStart=${weekStart}`)
@@ -486,32 +583,7 @@ export default function PlanPage() {
           )}
 
           {view === 'grocery' && (
-            <div style={{ maxWidth: '560px' }}>
-              <div className="card">
-                <h3 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300, marginBottom: '1.25rem' }}>Grocery List</h3>
-                {CATEGORY_ORDER.filter(cat => groceryByCategory()[cat]?.length).map(cat => (
-                  <div key={cat} className="grocery-section">
-                    <div className="grocery-category">{cat}</div>
-                    {groceryByCategory()[cat].map((item, i) => {
-                      const key = `${cat}-${i}`
-                      return (
-                        <label key={key} className="grocery-item" style={{ cursor: 'pointer' }}>
-                          <input type="checkbox" checked={checked.has(key)}
-                            onChange={() => setChecked(prev => {
-                              const next = new Set(prev)
-                              next.has(key) ? next.delete(key) : next.add(key)
-                              return next
-                            })} />
-                          <span style={{ textDecoration: checked.has(key) ? 'line-through' : 'none', opacity: checked.has(key) ? 0.5 : 1 }}>
-                            {item.amount} {item.item}
-                          </span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <GroceryView plan={plan} weekStart={weekStart} onPlanUpdate={setPlan} />
           )}
 
           {view === 'prep' && (

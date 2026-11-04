@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { ChefHat, Loader2, ShoppingCart, ClipboardList, Calendar, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChefHat, Loader2, ShoppingCart, ClipboardList, Calendar, X, Send, BookmarkPlus, Check } from 'lucide-react'
 
 interface Dinner {
   title: string
@@ -31,13 +31,123 @@ function getMonday(d = new Date()): string {
   return m.toISOString().split('T')[0]
 }
 
+interface ChatMessage { role: 'user' | 'assistant'; content: string }
+
+function DinnerChat({ dinner }: { dinner: Dinner }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, thinking])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || thinking) return
+    setInput('')
+    const history = messages.map(m => ({ role: m.role, content: m.content }))
+    setMessages(prev => [...prev, { role: 'user', content: text }])
+    setThinking(true)
+    const res = await fetch('/api/recipe-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe: dinner, message: text, history }),
+    })
+    const data = await res.json()
+    setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
+    setThinking(false)
+  }
+
+  const SUGGESTIONS = ['Any substitutions?', 'How do I know when it\'s done?', 'Can I make this ahead?']
+
+  return (
+    <div>
+      <div className="section-label" style={{ marginBottom: '0.75rem' }}>Ask about this recipe</div>
+      {messages.length === 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {SUGGESTIONS.map(s => (
+            <button key={s} className="btn-secondary"
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
+              onClick={() => setInput(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+      {messages.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem', maxHeight: '260px', overflowY: 'auto' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{
+              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '88%',
+              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
+              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+              padding: '0.6rem 0.9rem',
+              fontSize: '0.85rem',
+              lineHeight: 1.55,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {m.content}
+            </div>
+          ))}
+          {thinking && (
+            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+              <span className="spinner" style={{ width: 14, height: 14 }} />
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <input className="input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Substitutions, technique, variations…"
+          style={{ flex: 1, fontSize: '0.85rem' }}
+        />
+        <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
+          style={{ padding: '0.65rem 0.85rem' }}>
+          <Send size={14} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
   const d = day.dinner!
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  async function saveToBox() {
+    setSaving(true)
+    await fetch('/api/recipes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: d.title,
+        description: d.description,
+        ingredients: d.ingredients,
+        instructions: d.instructions,
+        prep_time: d.prep_time,
+        cook_time: d.cook_time,
+        servings: d.servings,
+        tags: d.tags,
+      }),
+    })
+    setSaving(false)
+    setSaved(true)
+  }
+
   return (
     <div className="panel-overlay" onClick={onClose}>
       <div className="panel" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginBottom: '0.25rem' }}>{day.day}</div>
             <h2 className="serif" style={{ fontSize: '2rem', fontWeight: 300, lineHeight: 1.1 }}>{d.title}</h2>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
@@ -49,10 +159,21 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
 
         <p style={{ color: 'var(--ink-light)', fontSize: '0.9rem', lineHeight: 1.6 }}>{d.description}</p>
 
-        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--ink-light)' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--ink-light)', alignItems: 'center', flexWrap: 'wrap' }}>
           {d.prep_time && <span>Prep {d.prep_time}m</span>}
           {d.cook_time && <span>Cook {d.cook_time}m</span>}
           {d.servings && <span>Serves {d.servings}</span>}
+          <button
+            onClick={saveToBox}
+            disabled={saving || saved}
+            className={saved ? 'btn-secondary' : 'btn-secondary'}
+            style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.85rem', color: saved ? 'var(--rosemary)' : undefined }}>
+            {saved
+              ? <><Check size={12} /> Saved to box</>
+              : saving
+              ? <><Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
+              : <><BookmarkPlus size={12} /> Save to recipe box</>}
+          </button>
         </div>
 
         {d.toddler_notes && (
@@ -75,6 +196,9 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
             {d.instructions?.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
           </ol>
         </div>
+
+        <hr className="divider" />
+        <DinnerChat dinner={d} />
       </div>
     </div>
   )
@@ -138,7 +262,6 @@ export default function PlanPage() {
         <p className="page-subtitle">Your weekly dinner plan</p>
       </div>
 
-      {/* Controls */}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
         <div>
           <div className="section-label">Week of</div>
@@ -162,7 +285,6 @@ export default function PlanPage() {
         </button>
       </div>
 
-      {/* Empty state */}
       {!plan && !loading && (
         <div className="empty-state">
           <ChefHat size={40} />
@@ -180,11 +302,8 @@ export default function PlanPage() {
 
       {plan && !loading && (
         <>
-          {/* Tab bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <h2 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300 }}>
-              {weekLabel()}
-            </h2>
+            <h2 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300 }}>{weekLabel()}</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {(['plan', 'grocery', 'prep'] as const).map(v => (
                 <button key={v}
@@ -199,7 +318,6 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* 7-day grid */}
           {view === 'plan' && (
             <div className="plan-grid">
               {plan.days.map(day => (
@@ -228,7 +346,6 @@ export default function PlanPage() {
             </div>
           )}
 
-          {/* Grocery list */}
           {view === 'grocery' && (
             <div style={{ maxWidth: '560px' }}>
               <div className="card">
@@ -258,7 +375,6 @@ export default function PlanPage() {
             </div>
           )}
 
-          {/* Prep notes */}
           {view === 'prep' && (
             <div style={{ maxWidth: '560px' }}>
               <div className="card">

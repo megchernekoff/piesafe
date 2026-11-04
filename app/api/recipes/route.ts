@@ -30,6 +30,31 @@ export async function GET(req: NextRequest) {
   )
 }
 
+export async function POST(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { title, description, ingredients, instructions, prep_time, cook_time, servings, tags } = await req.json()
+
+  await db.execute({
+    sql: `INSERT INTO recipes (user_id, title, description, ingredients, instructions, prep_time, cook_time, servings, tags)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      userId,
+      title,
+      description ?? '',
+      JSON.stringify(ingredients ?? []),
+      JSON.stringify(instructions ?? []),
+      prep_time ?? null,
+      cook_time ?? null,
+      servings ?? null,
+      JSON.stringify(tags ?? []),
+    ],
+  })
+
+  return NextResponse.json({ success: true })
+}
+
 export async function DELETE(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

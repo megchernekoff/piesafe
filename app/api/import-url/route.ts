@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
     const $ = cheerio.load(html)
     const ogTitle = $('meta[property="og:title"]').attr('content')
     const pageTitle = $('title').text().replace(/\s*[-|].*$/, '').trim()
-    title = ogTitle || pageTitle || title
+    const botTitles = /just a moment|just one moment|checking your browser|attention required|access denied|403 forbidden|please wait/i
+    const candidate = ogTitle || pageTitle
+    if (candidate && !botTitles.test(candidate)) title = candidate
   } catch { /* keep URL-derived title */ }
 
   await db.execute({

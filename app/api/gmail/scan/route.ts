@@ -149,15 +149,14 @@ ${cleanText}`,
 
     if (summary.length === 0) continue
 
-    const digestId = await db.execute({
+    await db.execute({
       sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT DO NOTHING`,
       args: [userId, msg.id, from, subject, date, JSON.stringify(summary)],
     })
 
-    digests.push({ id: msg.id, sender: from, subject, date, summary })
-    void digestId
+    digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0 })
   }
 
   return NextResponse.json({ digests })
@@ -173,7 +172,12 @@ export async function GET() {
   })
 
   return NextResponse.json(result.rows.map(r => ({
-    ...r,
+    id: String(r.id ?? ''),
+    gmail_id: String(r.gmail_id ?? ''),
+    sender: String(r.sender ?? ''),
+    subject: String(r.subject ?? ''),
+    date: String(r.date ?? ''),
     summary: JSON.parse((r.summary as string) || '[]'),
+    saved: Number(r.saved ?? 0),
   })))
 }

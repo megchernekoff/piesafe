@@ -13,7 +13,7 @@ const NAV = [
   { href: '/preferences', icon: Settings, label: 'Preferences' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number }) {
   const path = usePathname()
   return (
     <nav className="sidebar">
@@ -25,7 +25,22 @@ export default function Sidebar() {
         <Link key={href} href={href} style={{ textDecoration: 'none' }}>
           <button className={`nav-item${path === href ? ' active' : ''}`}>
             <Icon size={15} />
-            {label}
+            <span style={{ flex: 1 }}>{label}</span>
+            {href === '/newsletters' && unreadDigests > 0 && path !== href && (
+              <span style={{
+                background: 'var(--ochre)',
+                color: 'white',
+                borderRadius: '20px',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                padding: '0.1rem 0.45rem',
+                lineHeight: 1.4,
+                minWidth: '18px',
+                textAlign: 'center',
+              }}>
+                {unreadDigests > 9 ? '9+' : unreadDigests}
+              </span>
+            )}
           </button>
         </Link>
       ))}

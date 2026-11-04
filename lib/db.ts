@@ -19,7 +19,8 @@ export async function initializeSchema() {
       dislikes             TEXT    NOT NULL DEFAULT '[]',
       dietary_restrictions TEXT    NOT NULL DEFAULT '[]',
       created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
-      updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+      updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+      digests_last_seen    TEXT
     )
   `)
   await db.execute(`

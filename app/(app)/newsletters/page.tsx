@@ -62,6 +62,9 @@ export default function NewslettersPage() {
   const hasMatch = matches.length > 0
 
   useEffect(() => {
+    // Mark newsletters as seen
+    fetch('/api/digests/unread', { method: 'POST' }).catch(() => {})
+
     // Check Gmail connection + load existing digests and saved providers
     Promise.all([
       fetch('/api/gmail/scan').then(r => r.json()),

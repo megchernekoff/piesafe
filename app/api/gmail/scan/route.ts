@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { domain, providerName } = await req.json()
+  const { domain, providerName, pageToken = '' } = await req.json()
   if (!domain) return NextResponse.json({ error: 'domain required' }, { status: 400 })
 
   const tokenResult = await db.execute({
@@ -98,20 +98,20 @@ export async function POST(req: NextRequest) {
   console.log(`Scanning Gmail for domain:${domain} query:"${query}"`)
   void providerName
 
-  const searchRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=30`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  )
+  const pageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10${pageToken ? `&pageToken=${pageToken}` : ''}`
+
+  const searchRes = await fetch(pageUrl, { headers: { Authorization: `Bearer ${accessToken}` } })
   const searchData = await searchRes.json()
   const messages: { id: string }[] = searchData.messages ?? []
-  console.log(`Gmail search returned ${messages.length} messages, ${seenIds.size} already seen`)
+  const nextPageToken: string = searchData.nextPageToken ?? ''
+  console.log(`Gmail search returned ${messages.length} messages, nextPageToken: ${nextPageToken ? 'yes' : 'none'}`)
 
   const newMessages = messages.filter(m => !seenIds.has(m.id))
-  if (newMessages.length === 0) return NextResponse.json({ digests: [] })
+  if (newMessages.length === 0) return NextResponse.json({ digests: [], nextPageToken })
 
   const digests = []
 
-  for (const msg of newMessages.slice(0, 10)) {
+  for (const msg of newMessages) {
     const msgRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -123,13 +123,20 @@ export async function POST(req: NextRequest) {
     const from = headers.find(h => h.name === 'From')?.value ?? ''
     const date = headers.find(h => h.name === 'Date')?.value ?? ''
 
-    // Extract readable text from email body
     const body = extractBody(msgData.payload ?? {})
     const cleanText = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)
 
-    if (!cleanText || cleanText.length < 100) continue
+    if (!cleanText || cleanText.length < 100) {
+      // Still save the email, just with no recipes
+      await db.execute({
+        sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)
+              VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+        args: [userId, msg.id, from, subject, date, '[]'],
+      })
+      digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary: [], saved: 0 })
+      continue
+    }
 
-    // Ask Claude to summarise what recipes are in this email
     const claudeRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
@@ -154,19 +161,16 @@ ${cleanText}`,
       if (match) summary = JSON.parse(match[0])
     } catch { summary = [] }
 
-    if (summary.length === 0) continue
-
     await db.execute({
       sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING`,
+            VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
       args: [userId, msg.id, from, subject, date, JSON.stringify(summary)],
     })
 
     digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0 })
   }
 
-  return NextResponse.json({ digests })
+  return NextResponse.json({ digests, nextPageToken })
 }
 
 export async function GET() {

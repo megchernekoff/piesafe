@@ -52,6 +52,7 @@ export default function NewslettersPage() {
   const [saving, setSaving] = useState<string | null>(null)
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [scanning, setScanning] = useState<string | null>(null)
+  const [nextPageTokens, setNextPageTokens] = useState<Record<string, string>>({})
   const [toast, setToast] = useState('')
   const [query, setQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -106,12 +107,12 @@ export default function NewslettersPage() {
     setSavedProviders(prev => prev.filter(p => p.domain !== domain))
   }
 
-  async function scanProvider(domain: string, name: string) {
+  async function scanProvider(domain: string, name: string, pageToken = '') {
     setScanning(domain)
     const res = await fetch('/api/gmail/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain, providerName: name }),
+      body: JSON.stringify({ domain, providerName: name, pageToken }),
     })
     const data = await res.json()
     if (data.error) {
@@ -121,10 +122,11 @@ export default function NewslettersPage() {
       setDigests(prev => {
         const existingIds = prev.map(d => d.gmail_id)
         const fresh = newDigests.filter(d => !existingIds.includes(d.gmail_id))
-        return [...fresh, ...prev]
+        return pageToken ? [...prev, ...fresh] : [...fresh, ...prev]
       })
-      if (newDigests.length === 0) setToast(`No recent ${name} emails found.`)
-      else setToast(`Found ${newDigests.length} ${name} newsletter${newDigests.length > 1 ? 's' : ''}!`)
+      setNextPageTokens(prev => ({ ...prev, [domain]: data.nextPageToken ?? '' }))
+      if (newDigests.length === 0 && !pageToken) setToast(`No recent ${name} emails found.`)
+      else if (newDigests.length > 0) setToast(`Found ${newDigests.length} ${name} newsletter${newDigests.length > 1 ? 's' : ''}!`)
     }
     setScanning(null)
     setTimeout(() => setToast(''), 4000)
@@ -300,21 +302,27 @@ export default function NewslettersPage() {
                             </button>}
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {digest.summary.map((recipe, i) => (
-                          <label key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: isSaved ? 'default' : 'pointer', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
-                            {!isSaved && (
-                              <input type="checkbox" checked={selectedIndices.includes(i)}
-                                onChange={() => toggleRecipe(digest.gmail_id, i)}
-                                style={{ marginTop: '0.2rem', accentColor: 'var(--lavender)' }} />
-                            )}
-                            <div>
-                              <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
-                              {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
-                            </div>
-                          </label>
-                        ))}
-                      </div>
+                      {digest.summary.length === 0 ? (
+                        <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
+                          No recipes detected in this email.
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {digest.summary.map((recipe, i) => (
+                            <label key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: isSaved ? 'default' : 'pointer', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
+                              {!isSaved && (
+                                <input type="checkbox" checked={selectedIndices.includes(i)}
+                                  onChange={() => toggleRecipe(digest.gmail_id, i)}
+                                  style={{ marginTop: '0.2rem', accentColor: 'var(--lavender)' }} />
+                              )}
+                              <div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
+                                {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
 
                       {!isSaved && selectedIndices.length > 0 && (
                         <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--stone-dark)' }}>
@@ -329,6 +337,22 @@ export default function NewslettersPage() {
                   )
                 })}
               </div>
+
+              {/* Load more per provider */}
+              {savedProviders.map(p => {
+                const token = nextPageTokens[p.domain]
+                if (!token) return null
+                return (
+                  <button key={p.domain} className="btn-secondary"
+                    onClick={() => scanProvider(p.domain, p.name, token)}
+                    disabled={scanning === p.domain}
+                    style={{ alignSelf: 'flex-start', fontSize: '0.82rem', marginTop: '0.5rem' }}>
+                    {scanning === p.domain
+                      ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Loading…</>
+                      : `Load more ${p.name} →`}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

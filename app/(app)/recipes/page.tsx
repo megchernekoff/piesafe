@@ -135,9 +135,6 @@ export default function RecipesPage() {
     } else {
       setImportUrl('')
       load()
-      if (data.bookmarked) {
-        setImportError('This site blocked full import — saved as a bookmark. Use photo import to add the full recipe.')
-      }
     }
     setImporting(false)
   }
@@ -207,7 +204,7 @@ export default function RecipesPage() {
         {/* URL import */}
         {importTab === 'url' && (
           <div>
-            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Paste a recipe URL</div>
+            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Save a recipe from any website</div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <input className="input"
                 placeholder="https://www.seriouseats.com/..."

@@ -1,14 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Calendar, Home, Settings } from 'lucide-react'
+import { BookOpen, Calendar, Home, Settings, Mail } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 import PieIcon from './icons/PieIcon'
 
 const NAV = [
-  { href: '/dashboard', icon: Home,     label: 'Home' },
-  { href: '/recipes',   icon: BookOpen, label: 'Recipes' },
-  { href: '/plan',      icon: Calendar, label: 'Meal Plan' },
+  { href: '/dashboard',   icon: Home,     label: 'Home' },
+  { href: '/recipes',     icon: BookOpen, label: 'Recipes' },
+  { href: '/plan',        icon: Calendar, label: 'Meal Plan' },
+  { href: '/newsletters', icon: Mail,     label: 'Newsletters' },
   { href: '/preferences', icon: Settings, label: 'Preferences' },
 ]
 

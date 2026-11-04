@@ -56,4 +56,28 @@ export async function initializeSchema() {
   `)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_user ON meal_plans(user_id)`)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_week ON meal_plans(user_id, week_start_date)`)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS gmail_tokens (
+      user_id       TEXT PRIMARY KEY,
+      access_token  TEXT NOT NULL,
+      refresh_token TEXT NOT NULL,
+      expiry        INTEGER NOT NULL,
+      email         TEXT,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS email_digests (
+      id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id    TEXT NOT NULL,
+      gmail_id   TEXT NOT NULL,
+      sender     TEXT NOT NULL,
+      subject    TEXT NOT NULL,
+      date       TEXT NOT NULL,
+      summary    TEXT NOT NULL DEFAULT '[]',
+      saved      INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
 }

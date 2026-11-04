@@ -1,0 +1,179 @@
+import { auth } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+import { db } from '@/lib/db'
+
+const anthropic = new Anthropic()
+
+const RECIPE_SENDERS = [
+  'newsletters@seriouseats.com',
+  'cooking@nytimes.com',
+  'newsletter@bonappetit.com',
+  'hello@food52.com',
+  'newsletter@halfbakedharvest.com',
+  'email@smittenkitchen.com',
+  'newsletter@thekitchn.com',
+  'digest@epicurious.com',
+  'hello@budgetbytes.com',
+]
+
+async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {
+  if (Date.now() < tokens.expiry - 60000) return tokens.access_token
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      refresh_token: tokens.refresh_token,
+      grant_type: 'refresh_token',
+    }),
+  })
+  const data = await res.json()
+  if (!data.access_token) throw new Error('Token refresh failed')
+
+  const expiry = Date.now() + (data.expires_in ?? 3600) * 1000
+  await db.execute({
+    sql: 'UPDATE gmail_tokens SET access_token = ?, expiry = ?, updated_at = datetime(\'now\') WHERE user_id = ?',
+    args: [data.access_token, expiry, userId],
+  })
+  return data.access_token as string
+}
+
+function decodeBase64(str: string): string {
+  return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+}
+
+function extractBody(payload: Record<string, unknown>): string {
+  if (payload.body && (payload.body as Record<string, unknown>).data) {
+    return decodeBase64((payload.body as Record<string, string>).data)
+  }
+  if (payload.parts) {
+    for (const part of payload.parts as Record<string, unknown>[]) {
+      const text = extractBody(part)
+      if (text) return text
+    }
+  }
+  return ''
+}
+
+export async function POST() {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const tokenResult = await db.execute({
+    sql: 'SELECT * FROM gmail_tokens WHERE user_id = ?',
+    args: [userId],
+  })
+  if (tokenResult.rows.length === 0) return NextResponse.json({ error: 'Gmail not connected' }, { status: 400 })
+
+  const tokenRow = tokenResult.rows[0]
+  let accessToken: string
+  try {
+    accessToken = await refreshIfNeeded(userId, {
+      access_token: tokenRow.access_token as string,
+      refresh_token: tokenRow.refresh_token as string,
+      expiry: tokenRow.expiry as number,
+    })
+  } catch {
+    return NextResponse.json({ error: 'Gmail token expired — please reconnect.' }, { status: 401 })
+  }
+
+  // Fetch already-scanned gmail IDs to avoid duplicates
+  const existing = await db.execute({
+    sql: 'SELECT gmail_id FROM email_digests WHERE user_id = ?',
+    args: [userId],
+  })
+  const seenIds = new Set(existing.rows.map(r => r.gmail_id as string))
+
+  // Search for emails from known senders in the last 14 days
+  const after = Math.floor((Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000)
+  const senderQuery = RECIPE_SENDERS.map(s => `from:${s}`).join(' OR ')
+  const query = `(${senderQuery}) after:${after}`
+
+  const searchRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  const searchData = await searchRes.json()
+  const messages: { id: string }[] = searchData.messages ?? []
+
+  const newMessages = messages.filter(m => !seenIds.has(m.id))
+  if (newMessages.length === 0) return NextResponse.json({ digests: [] })
+
+  const digests = []
+
+  for (const msg of newMessages.slice(0, 10)) {
+    const msgRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const msgData = await msgRes.json()
+
+    const headers: { name: string; value: string }[] = msgData.payload?.headers ?? []
+    const subject = headers.find(h => h.name === 'Subject')?.value ?? '(no subject)'
+    const from = headers.find(h => h.name === 'From')?.value ?? ''
+    const date = headers.find(h => h.name === 'Date')?.value ?? ''
+
+    // Extract readable text from email body
+    const body = extractBody(msgData.payload ?? {})
+    const cleanText = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)
+
+    if (!cleanText || cleanText.length < 100) continue
+
+    // Ask Claude to summarise what recipes are in this email
+    const claudeRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 512,
+      messages: [{
+        role: 'user',
+        content: `This is a recipe newsletter email. Extract a list of the recipes or dishes mentioned.
+Return a JSON array of objects, one per recipe found:
+[{ "title": "Recipe name", "description": "One short sentence about it" }]
+If no recipes are mentioned, return [].
+Return only valid JSON.
+
+Email subject: ${subject}
+Email text:
+${cleanText}`,
+      }],
+    })
+
+    let summary: { title: string; description: string }[] = []
+    try {
+      const raw = (claudeRes.content[0] as { text: string }).text
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (match) summary = JSON.parse(match[0])
+    } catch { summary = [] }
+
+    if (summary.length === 0) continue
+
+    const digestId = await db.execute({
+      sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT DO NOTHING`,
+      args: [userId, msg.id, from, subject, date, JSON.stringify(summary)],
+    })
+
+    digests.push({ id: msg.id, sender: from, subject, date, summary })
+    void digestId
+  }
+
+  return NextResponse.json({ digests })
+}
+
+export async function GET() {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const result = await db.execute({
+    sql: 'SELECT * FROM email_digests WHERE user_id = ? ORDER BY date DESC',
+    args: [userId],
+  })
+
+  return NextResponse.json(result.rows.map(r => ({
+    ...r,
+    summary: JSON.parse((r.summary as string) || '[]'),
+  })))
+}

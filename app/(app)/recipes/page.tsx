@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink } from 'lucide-react'
+import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink, Send } from 'lucide-react'
 
 interface Recipe {
   id: string
@@ -127,10 +127,106 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
         </div>
 
         <hr className="divider" />
+
+        {/* Recipe chat */}
+        <RecipeChat recipe={recipe} />
+
+        <hr className="divider" />
         <button className="btn-ghost" onClick={handleDelete} disabled={deleting}
           style={{ color: 'var(--terracotta)', alignSelf: 'flex-start' }}>
           {deleting ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Trash2 size={14} />}
           {deleting ? 'Deleting…' : 'Delete recipe'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface ChatMessage { role: 'user' | 'assistant'; content: string }
+
+function RecipeChat({ recipe }: { recipe: Recipe }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, thinking])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || thinking) return
+    setInput('')
+    const history = messages.map(m => ({ role: m.role, content: m.content }))
+    setMessages(prev => [...prev, { role: 'user', content: text }])
+    setThinking(true)
+
+    const res = await fetch('/api/recipe-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe, message: text, history }),
+    })
+    const data = await res.json()
+    setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
+    setThinking(false)
+  }
+
+  const SUGGESTIONS = ['Any substitutions I should know about?', 'How do I know when it\'s done?', 'Can I make this ahead?']
+
+  return (
+    <div>
+      <div className="section-label" style={{ marginBottom: '0.75rem' }}>Ask about this recipe</div>
+
+      {messages.length === 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {SUGGESTIONS.map(s => (
+            <button key={s} className="btn-secondary"
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
+              onClick={() => { setInput(s) }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {messages.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem', maxHeight: '280px', overflowY: 'auto', padding: '0.25rem 0' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{
+              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '88%',
+              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
+              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+              padding: '0.6rem 0.9rem',
+              fontSize: '0.85rem',
+              lineHeight: 1.55,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {m.content}
+            </div>
+          ))}
+          {thinking && (
+            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+              <span className="spinner" style={{ width: 14, height: 14 }} />
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <input className="input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Substitutions, technique, variations…"
+          style={{ flex: 1, fontSize: '0.85rem' }}
+        />
+        <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
+          style={{ padding: '0.65rem 0.85rem' }}>
+          <Send size={14} />
         </button>
       </div>
     </div>

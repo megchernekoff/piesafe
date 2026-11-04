@@ -9,7 +9,7 @@ const NAV = [
   { href: '/dashboard',   icon: Home,     label: 'Home' },
   { href: '/recipes',     icon: BookOpen, label: 'Recipes' },
   { href: '/plan',        icon: Calendar, label: 'Meal Plan' },
-  { href: '/newsletters', icon: Mail,     label: 'Newsletters' },
+  { href: '/digest', icon: Mail,     label: 'The Digest' },
   { href: '/preferences', icon: Settings, label: 'Preferences' },
 ]
 
@@ -26,7 +26,7 @@ export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number 
           <button className={`nav-item${path === href ? ' active' : ''}`}>
             <Icon size={15} />
             <span style={{ flex: 1 }}>{label}</span>
-            {href === '/newsletters' && unreadDigests > 0 && path !== href && (
+            {href === '/digest' && unreadDigests > 0 && path !== href && (
               <span style={{
                 background: 'var(--ochre)',
                 color: 'white',

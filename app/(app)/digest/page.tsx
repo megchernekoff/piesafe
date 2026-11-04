@@ -43,7 +43,7 @@ function senderName(from: string): string {
   return match || from.split('@')[0]
 }
 
-export default function NewslettersPage() {
+export default function DigestPage() {
   const [connected, setConnected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [savedProviders, setSavedProviders] = useState<SavedProvider[]>([])
@@ -62,7 +62,7 @@ export default function NewslettersPage() {
   const hasMatch = matches.length > 0
 
   useEffect(() => {
-    // Mark newsletters as seen
+    // Mark digest as seen
     fetch('/api/digests/unread', { method: 'POST' }).catch(() => {})
 
     // Check Gmail connection + load existing digests and saved providers
@@ -83,11 +83,11 @@ export default function NewslettersPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('gmail') === 'connected') {
       setConnected('connected')
-      window.history.replaceState({}, '', '/newsletters')
+      window.history.replaceState({}, '', '/digest')
     }
     if (params.get('gmail') === 'error') {
       setToast('Could not connect Gmail — please try again.')
-      window.history.replaceState({}, '', '/newsletters')
+      window.history.replaceState({}, '', '/digest')
     }
   }, [])
 
@@ -129,7 +129,7 @@ export default function NewslettersPage() {
       })
       setNextPageTokens(prev => ({ ...prev, [domain]: data.nextPageToken ?? '' }))
       if (newDigests.length === 0 && !pageToken) setToast(`No recent ${name} emails found.`)
-      else if (newDigests.length > 0) setToast(`Found ${newDigests.length} ${name} newsletter${newDigests.length > 1 ? 's' : ''}!`)
+      else if (newDigests.length > 0) setToast(`Found ${newDigests.length} ${name} digest${newDigests.length > 1 ? 's' : ''}!`)
     }
     setScanning(null)
     setTimeout(() => setToast(''), 4000)
@@ -181,7 +181,7 @@ export default function NewslettersPage() {
       {toast && <div className="toast">{toast}</div>}
 
       <div className="page-header">
-        <h1 className="page-title">Newsletters</h1>
+        <h1 className="page-title">The Digest</h1>
         <p className="page-subtitle">Recipe emails from your inbox, your way</p>
       </div>
 
@@ -200,9 +200,9 @@ export default function NewslettersPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-          {/* Add newsletter search */}
+          {/* Add digest search */}
           <div style={{ maxWidth: '480px', position: 'relative' }}>
-            <div className="section-label" style={{ marginBottom: '0.6rem' }}>Add a newsletter to follow</div>
+            <div className="section-label" style={{ marginBottom: '0.6rem' }}>Add a newsletter source</div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-light)', pointerEvents: 'none' }} />
@@ -241,7 +241,7 @@ export default function NewslettersPage() {
           {/* Saved providers list */}
           {savedProviders.length > 0 && (
             <div style={{ maxWidth: '640px' }}>
-              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Your newsletters</div>
+              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Your digest</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {savedProviders.map(p => (
                   <div key={p.domain} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'var(--parchment)', borderRadius: 10, border: '1px solid var(--stone-dark)' }}>
@@ -266,8 +266,8 @@ export default function NewslettersPage() {
           {savedProviders.length === 0 && digests.length === 0 && (
             <div className="empty-state">
               <Mail size={40} />
-              <h3>No newsletters yet</h3>
-              <p>Search for a newsletter above to get started.</p>
+              <h3>Nothing added yet</h3>
+              <p>Search above to get started.</p>
             </div>
           )}
 
@@ -281,7 +281,7 @@ export default function NewslettersPage() {
           {/* Digest results */}
           {digests.length > 0 && (
             <div style={{ maxWidth: '680px' }}>
-              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Recent newsletters</div>
+              <div className="section-label" style={{ marginBottom: '0.75rem' }}>Recent digest</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {digests.map(digest => {
                   const isSaved = savedIds.includes(digest.gmail_id) || digest.saved === 1

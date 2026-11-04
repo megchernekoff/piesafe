@@ -44,11 +44,11 @@ export default async function DashboardPage() {
       </div>
 
       {unreadDigests > 0 && (
-        <Link href="/newsletters" style={{ textDecoration: 'none', display: 'block', maxWidth: '700px', marginBottom: '1.5rem' }}>
+        <Link href="/digest" style={{ textDecoration: 'none', display: 'block', maxWidth: '700px', marginBottom: '1.5rem' }}>
           <div style={{ background: 'var(--lavender-soft)', border: '1px solid var(--lavender)', borderRadius: 10, padding: '0.9rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
             <Mail size={16} style={{ color: 'var(--lavender)', flexShrink: 0 }} />
             <span style={{ fontSize: '0.875rem', color: 'var(--ink)' }}>
-              <strong>{unreadDigests} new newsletter{unreadDigests > 1 ? 's' : ''}</strong> arrived since your last visit —{' '}
+              <strong>{unreadDigests} new digest{unreadDigests > 1 ? 's' : ''}</strong> arrived since your last visit —{' '}
               <span style={{ color: 'var(--lavender)', textDecoration: 'underline' }}>see what you missed</span>
             </span>
           </div>

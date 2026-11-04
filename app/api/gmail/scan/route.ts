@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   console.log(`Scanning Gmail for domain:${domain} query:"${query}"`)
   void providerName
 
-  const pageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10${pageToken ? `&pageToken=${pageToken}` : ''}`
+  const pageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=3${pageToken ? `&pageToken=${pageToken}` : ''}`
 
   const searchRes = await fetch(pageUrl, { headers: { Authorization: `Bearer ${accessToken}` } })
   const searchData = await searchRes.json()

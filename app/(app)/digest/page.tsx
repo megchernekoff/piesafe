@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
 
 interface Provider { name: string; domain: string; keywords: string[] }
 interface SavedProvider { name: string; domain: string }
@@ -44,6 +45,7 @@ function senderName(from: string): string {
 }
 
 export default function DigestPage() {
+  const router = useRouter()
   const [connected, setConnected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [savedProviders, setSavedProviders] = useState<SavedProvider[]>([])
@@ -62,8 +64,10 @@ export default function DigestPage() {
   const hasMatch = matches.length > 0
 
   useEffect(() => {
-    // Mark digest as seen
-    fetch('/api/digests/unread', { method: 'POST' }).catch(() => {})
+    // Mark digest as seen and refresh layout so sidebar badge clears
+    fetch('/api/digests/unread', { method: 'POST' })
+      .then(() => router.refresh())
+      .catch(() => {})
 
     // Check Gmail connection + load existing digests and saved providers
     Promise.all([
@@ -133,6 +137,15 @@ export default function DigestPage() {
     }
     setScanning(null)
     setTimeout(() => setToast(''), 4000)
+  }
+
+  async function dismissDigest(gmailId: string) {
+    await fetch('/api/gmail/dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gmailId }),
+    })
+    setDigests(prev => prev.filter(d => d.gmail_id !== gmailId))
   }
 
   async function disconnect() {
@@ -255,7 +268,7 @@ export default function DigestPage() {
                     </button>
                     <button className="btn-ghost" onClick={() => removeProvider(p.domain)}
                       style={{ padding: '0.35rem', color: 'var(--ink-light)', opacity: 0.5 }}>
-                      <Trash2 size={13} />
+                      <X size={13} />
                     </button>
                   </div>
                 ))}
@@ -298,11 +311,17 @@ export default function DigestPage() {
                             {new Date(digest.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </div>
                         </div>
-                        {isSaved
-                          ? <span style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Saved</span>
-                          : <button className="btn-ghost" onClick={() => toggleAll(digest)} style={{ fontSize: '0.75rem' }}>
-                              {selectedIndices.length === digest.summary.length ? 'Deselect all' : 'Select all'}
-                            </button>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          {isSaved
+                            ? <span style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={12} /> Saved</span>
+                            : <button className="btn-ghost" onClick={() => toggleAll(digest)} style={{ fontSize: '0.75rem' }}>
+                                {selectedIndices.length === digest.summary.length ? 'Deselect all' : 'Select all'}
+                              </button>}
+                          <button className="btn-ghost" onClick={() => dismissDigest(digest.gmail_id)}
+                            style={{ padding: '0.3rem', opacity: 0.4 }} title="Dismiss">
+                            <X size={14} />
+                          </button>
+                        </div>
                       </div>
 
                       {digest.summary.length === 0 ? (

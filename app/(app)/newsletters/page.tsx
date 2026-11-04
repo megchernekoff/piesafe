@@ -33,7 +33,7 @@ export default function NewslettersPage() {
     fetch('/api/gmail/scan')
       .then(r => r.json())
       .then(data => {
-        if (data.error === 'Gmail not connected') {
+        if (data.connected === false) {
           setConnected(null)
         } else {
           setConnected('connected')

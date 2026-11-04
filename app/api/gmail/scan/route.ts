@@ -66,7 +66,7 @@ export async function POST() {
     sql: 'SELECT * FROM gmail_tokens WHERE user_id = ?',
     args: [userId],
   })
-  if (tokenResult.rows.length === 0) return NextResponse.json({ error: 'Gmail not connected' }, { status: 400 })
+  if (tokenResult.rows.length === 0) return NextResponse.json({ connected: false })
 
   const tokenRow = tokenResult.rows[0]
   let accessToken: string

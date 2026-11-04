@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
 
-interface Provider { name: string; domain: string; from?: string; keywords: string[] }
+interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
 interface SavedProvider { name: string; domain: string }
 interface DigestRecipe { title: string; description: string }
 interface Digest {
@@ -17,7 +17,7 @@ interface Digest {
 }
 
 const SUPPORTED_PROVIDERS: Provider[] = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', senderName: 'NYT Cooking', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
   { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',     keywords: ['serious eats'] },
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',       keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                keywords: ['food52'] },

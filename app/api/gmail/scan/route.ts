@@ -6,7 +6,7 @@ import { db } from '@/lib/db'
 const anthropic = new Anthropic()
 
 export const SUPPORTED_PROVIDERS = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', senderName: 'NYT Cooking', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
   { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',          keywords: ['serious eats', 'seriouseats'] },
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',            keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                     keywords: ['food52'] },
@@ -125,6 +125,15 @@ export async function POST(req: NextRequest) {
     const subject = headers.find(h => h.name === 'Subject')?.value ?? '(no subject)'
     const from = headers.find(h => h.name === 'From')?.value ?? ''
     const date = headers.find(h => h.name === 'Date')?.value ?? ''
+
+    // If provider requires a specific sender display name, enforce it
+    if (provider?.senderName) {
+      const displayName = from.split('<')[0].replace(/"/g, '').trim()
+      if (!displayName.toLowerCase().includes(provider.senderName.toLowerCase())) {
+        console.log(`Skipping non-matching sender: "${displayName}" (expected "${provider.senderName}")`)
+        continue
+      }
+    }
 
     const body = extractBody(msgData.payload ?? {})
     const cleanText = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)

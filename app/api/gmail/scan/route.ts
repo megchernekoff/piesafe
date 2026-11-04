@@ -94,7 +94,8 @@ export async function POST(req: NextRequest) {
 
   // Search for emails from the specified domain in the last 30 days
   const after = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)
-  const query = `from:@${domain} after:${after}`
+  const query = `from:${domain} after:${after}`
+  console.log(`Scanning Gmail for domain:${domain} query:"${query}"`)
   void providerName
 
   const searchRes = await fetch(
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
   )
   const searchData = await searchRes.json()
   const messages: { id: string }[] = searchData.messages ?? []
+  console.log(`Gmail search returned ${messages.length} messages, ${seenIds.size} already seen`)
 
   const newMessages = messages.filter(m => !seenIds.has(m.id))
   if (newMessages.length === 0) return NextResponse.json({ digests: [] })

@@ -1,25 +1,22 @@
 import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
 
-// Domain-based search catches any sender address from these publishers
-const RECIPE_DOMAINS = [
-  'nytimes.com',
-  'seriouseats.com',
-  'bonappetit.com',
-  'food52.com',
-  'halfbakedharvest.com',
-  'smittenkitchen.com',
-  'thekitchn.com',
-  'epicurious.com',
-  'budgetbytes.com',
-  'kingarthurbaking.com',
-  'simplyrecipes.com',
-  'allrecipes.com',
-  'cooking.nytimes.com',
+export const SUPPORTED_PROVIDERS = [
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'Serious Eats',       domain: 'seriouseats.com',       keywords: ['serious eats', 'seriouseats'] },
+  { name: 'Bon Appétit',        domain: 'bonappetit.com',        keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
+  { name: 'Food52',             domain: 'food52.com',            keywords: ['food52'] },
+  { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  keywords: ['half baked harvest', 'halfbakedharvest'] },
+  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    keywords: ['smitten kitchen', 'smittenkitchen'] },
+  { name: 'The Kitchn',         domain: 'thekitchn.com',         keywords: ['the kitchn', 'kitchn'] },
+  { name: 'Epicurious',         domain: 'epicurious.com',        keywords: ['epicurious'] },
+  { name: 'Budget Bytes',       domain: 'budgetbytes.com',       keywords: ['budget bytes', 'budgetbytes'] },
+  { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  keywords: ['king arthur', 'king arthur baking'] },
+  { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     keywords: ['simply recipes', 'simplyrecipes'] },
 ]
 
 async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {
@@ -63,9 +60,12 @@ function extractBody(payload: Record<string, unknown>): string {
   return ''
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { domain, providerName } = await req.json()
+  if (!domain) return NextResponse.json({ error: 'domain required' }, { status: 400 })
 
   const tokenResult = await db.execute({
     sql: 'SELECT * FROM gmail_tokens WHERE user_id = ?',
@@ -92,10 +92,10 @@ export async function POST() {
   })
   const seenIds = new Set(existing.rows.map(r => r.gmail_id as string))
 
-  // Search for emails from known recipe domains in the last 30 days
+  // Search for emails from the specified domain in the last 30 days
   const after = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)
-  const senderQuery = RECIPE_DOMAINS.map(d => `from:@${d}`).join(' OR ')
-  const query = `(${senderQuery}) after:${after}`
+  const query = `from:@${domain} after:${after}`
+  void providerName
 
   const searchRes = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=30`,

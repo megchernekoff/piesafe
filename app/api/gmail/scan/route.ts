@@ -6,7 +6,7 @@ import { db } from '@/lib/db'
 const anthropic = new Anthropic()
 
 export const SUPPORTED_PROVIDERS = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: 'nytdirect@nytimes.com',                keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
   { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',          keywords: ['serious eats', 'seriouseats'] },
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',            keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                     keywords: ['food52'] },

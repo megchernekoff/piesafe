@@ -21,7 +21,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
   background-color: var(--wheat);
   color: var(--ink);
   min-height: 100vh;
@@ -81,7 +81,7 @@ h1, h2, h3, .serif {
   background: none;
   width: 100%;
   text-align: left;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
 }
 
 .nav-item:hover {
@@ -147,7 +147,7 @@ h1, h2, h3, .serif {
   padding: 0.65rem 1.4rem;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -167,7 +167,7 @@ h1, h2, h3, .serif {
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
@@ -193,7 +193,7 @@ h1, h2, h3, .serif {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
 }
 
 .btn-ghost:hover { background: var(--stone-dark); color: var(--ink); }
@@ -218,7 +218,7 @@ h1, h2, h3, .serif {
   border: 1px solid var(--stone-dark);
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
   background: var(--parchment);
   color: var(--ink);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -236,7 +236,7 @@ h1, h2, h3, .serif {
   border: 1px solid var(--stone-dark);
   border-radius: 8px;
   font-size: 0.875rem;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Lora', Georgia, serif;
   background: var(--parchment);
   color: var(--ink);
   transition: border-color 0.15s;

@@ -327,7 +327,10 @@ export default function PlanPage() {
   const [tweaks, setTweaks] = useState('')
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
-  const [view, setView] = useState<'plan' | 'grocery' | 'prep'>('plan')
+  const initialTab = typeof window !== 'undefined'
+    ? (new URLSearchParams(window.location.search).get('tab') as 'plan' | 'grocery' | 'prep' | null) ?? 'plan'
+    : 'plan'
+  const [view, setView] = useState<'plan' | 'grocery' | 'prep'>(initialTab)
   const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null)
   const [checked, setChecked] = useState<Set<string>>(new Set())
 

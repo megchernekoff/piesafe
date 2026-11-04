@@ -70,7 +70,7 @@ export default async function DashboardPage() {
             <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>Generate this week&apos;s dinners</p>
           </div>
         </Link>
-        <Link href="/plan" style={{ textDecoration: 'none' }}>
+        <Link href="/plan?tab=grocery" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer' }}>
             <ShoppingCart size={20} style={{ color: 'var(--ochre)', marginBottom: '0.75rem' }} />
             <h3>Grocery List</h3>

@@ -135,6 +135,9 @@ export default function RecipesPage() {
     } else {
       setImportUrl('')
       load()
+      if (data.bookmarked) {
+        setImportError('This site blocked full import — saved as a bookmark. Use photo import to add the full recipe.')
+      }
     }
     setImporting(false)
   }

@@ -124,7 +124,27 @@ export async function POST(req: NextRequest) {
     .replace(/\s+/g, ' ').trim().slice(0, 8000)
 
   if (text.length < 200) {
-    return NextResponse.json({ error: 'This site blocked the import. Try a different recipe site, or use the photo import instead.' }, { status: 422 })
+    // Site blocked full content — save a bookmark with just the page title and URL
+    const $ = cheerio.load(html)
+    const pageTitle = $('title').text().replace(/\s*[-|].*$/, '').trim() || 'Saved recipe'
+    await db.execute({
+      sql: `INSERT INTO recipes (user_id, title, description, ingredients, instructions, source_url, tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        userId,
+        pageTitle,
+        'Saved from URL — full recipe not imported. Use the photo import to add details.',
+        JSON.stringify([]),
+        JSON.stringify([]),
+        url,
+        JSON.stringify(['bookmarked']),
+      ],
+    })
+    return NextResponse.json({
+      success: true,
+      bookmarked: true,
+      recipe: { title: pageTitle, source_url: url, description: 'Bookmarked — photo import to add full recipe.' },
+    })
   }
 
   const message = await anthropic.messages.create({

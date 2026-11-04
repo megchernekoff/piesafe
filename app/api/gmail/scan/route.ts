@@ -5,16 +5,21 @@ import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
 
-const RECIPE_SENDERS = [
-  'newsletters@seriouseats.com',
-  'cooking@nytimes.com',
-  'newsletter@bonappetit.com',
-  'hello@food52.com',
-  'newsletter@halfbakedharvest.com',
-  'email@smittenkitchen.com',
-  'newsletter@thekitchn.com',
-  'digest@epicurious.com',
-  'hello@budgetbytes.com',
+// Domain-based search catches any sender address from these publishers
+const RECIPE_DOMAINS = [
+  'nytimes.com',
+  'seriouseats.com',
+  'bonappetit.com',
+  'food52.com',
+  'halfbakedharvest.com',
+  'smittenkitchen.com',
+  'thekitchn.com',
+  'epicurious.com',
+  'budgetbytes.com',
+  'kingarthurbaking.com',
+  'simplyrecipes.com',
+  'allrecipes.com',
+  'cooking.nytimes.com',
 ]
 
 async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {
@@ -87,13 +92,13 @@ export async function POST() {
   })
   const seenIds = new Set(existing.rows.map(r => r.gmail_id as string))
 
-  // Search for emails from known senders in the last 14 days
-  const after = Math.floor((Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000)
-  const senderQuery = RECIPE_SENDERS.map(s => `from:${s}`).join(' OR ')
+  // Search for emails from known recipe domains in the last 30 days
+  const after = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)
+  const senderQuery = RECIPE_DOMAINS.map(d => `from:@${d}`).join(' OR ')
   const query = `(${senderQuery}) after:${after}`
 
   const searchRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=30`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   const searchData = await searchRes.json()

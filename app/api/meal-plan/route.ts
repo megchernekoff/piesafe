@@ -55,16 +55,34 @@ export async function POST(req: NextRequest) {
   const { weekStart, tweaks } = await req.json()
   if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
 
-  const profileResult = await db.execute({
-    sql: 'SELECT * FROM profiles WHERE user_id = ?',
-    args: [userId],
-  })
+  const [profileResult, recipesResult] = await Promise.all([
+    db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] }),
+    db.execute({ sql: 'SELECT title, description, ingredients, instructions, prep_time, cook_time, servings, tags FROM recipes WHERE user_id = ? ORDER BY created_at DESC LIMIT 30', args: [userId] }),
+  ])
+
   const profile = profileResult.rows[0] ?? null
   const dislikes: string[] = profile ? JSON.parse((profile.dislikes as string) || '[]') : []
   const dietary: string[] = profile ? JSON.parse((profile.dietary_restrictions as string) || '[]') : []
   const toddlerMode = profile?.toddler_mode === 1
   const toddlerAge = profile?.toddler_age as number | null
   const householdSize = (profile?.household_size as number) || 2
+
+  // Only pass recipes that have full ingredient data (photo imports)
+  const savedRecipes = recipesResult.rows
+    .filter(r => {
+      const ingredients = JSON.parse((r.ingredients as string) || '[]')
+      return ingredients.length > 0
+    })
+    .map(r => ({
+      title: r.title as string,
+      description: r.description as string,
+      ingredients: JSON.parse((r.ingredients as string) || '[]') as string[],
+      instructions: JSON.parse((r.instructions as string) || '[]') as string[],
+      prep_time: r.prep_time as number | null,
+      cook_time: r.cook_time as number | null,
+      servings: r.servings as number | null,
+      tags: JSON.parse((r.tags as string) || '[]') as string[],
+    }))
 
   const monday = getMonday(weekStart)
   const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -74,11 +92,17 @@ export async function POST(req: NextRequest) {
     return { name, date: d.toISOString().split('T')[0] }
   })
 
+  const savedRecipesBlock = savedRecipes.length > 0
+    ? `\nThe user has these saved recipes in their recipe box — try to use some of them this week:\n${savedRecipes.map(r =>
+        `- ${r.title}${r.description ? `: ${r.description}` : ''}${r.prep_time || r.cook_time ? ` (${[r.prep_time && `${r.prep_time}m prep`, r.cook_time && `${r.cook_time}m cook`].filter(Boolean).join(', ')})` : ''}`
+      ).join('\n')}\nFor any saved recipe you use, copy its exact ingredients and instructions from above.\n`
+    : ''
+
   const prompt = `Generate a 7-day dinner meal plan for a household of ${householdSize} people.
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
 ${dislikes.length ? `Never use these ingredients: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
-${tweaks ? `Special requests: ${tweaks}` : ''}
+${tweaks ? `Special requests: ${tweaks}` : ''}${savedRecipesBlock}
 
 Week: ${days.map(d => `${d.name} ${d.date}`).join(', ')}.
 

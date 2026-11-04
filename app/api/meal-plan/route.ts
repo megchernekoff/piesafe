@@ -82,7 +82,7 @@ ${tweaks ? `Special requests: ${tweaks}` : ''}
 
 Week: ${days.map(d => `${d.name} ${d.date}`).join(', ')}.
 
-Return a JSON object:
+Return a JSON object. Be concise — keep ingredients to one line each, instructions to one sentence each:
 {
   "days": [
     {
@@ -94,31 +94,33 @@ Return a JSON object:
         "prep_time": 15,
         "cook_time": 30,
         "servings": ${householdSize},
-        "ingredients": ["amount + ingredient", ...],
-        "instructions": ["Step 1", ...],
-        "toddler_notes": "How to adapt, or null",
-        "tags": ["tag", ...]
+        "ingredients": ["2 cups flour", "1 tsp salt", ...],
+        "instructions": ["Step 1.", "Step 2.", ...],
+        "toddler_notes": "Brief adaptation or null",
+        "tags": ["tag1", "tag2"]
       }
     }
   ],
   "grocery_list": [
     { "item": "name", "amount": "qty + unit", "category": "produce|protein|dairy|pantry|other" }
   ],
-  "prep_notes": ["Ahead-of-time tip", ...]
+  "prep_notes": ["One tip per line."]
 }
 
-Make varied, delicious, practical meals. Return only valid JSON.`
+Make varied, delicious, practical meals. Return only valid JSON, no markdown.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8000,
     messages: [{ role: 'user', content: prompt }],
   })
 
+  const rawText = (message.content[0] as { text: string }).text
   let plan: { days: unknown[]; grocery_list: unknown[]; prep_notes: unknown[] }
   try {
-    plan = JSON.parse(extractJSON((message.content[0] as { text: string }).text))
+    plan = JSON.parse(extractJSON(rawText))
   } catch {
+    console.error('Meal plan parse error. Stop reason:', message.stop_reason, '| Response length:', rawText.length)
     return NextResponse.json({ error: 'Failed to parse meal plan from AI response.' }, { status: 500 })
   }
 

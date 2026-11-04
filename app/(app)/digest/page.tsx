@@ -29,6 +29,7 @@ const SUPPORTED_PROVIDERS: Provider[] = [
   { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  from: 'newsletter@kingarthurbaking.com', keywords: ['king arthur'] },
   { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',    keywords: ['simply recipes'] },
   { name: 'What to Cook',       domain: 'substack.com',          from: 'whattocook@substack.com',         keywords: ['what to cook', 'caro chambers', 'whattocook'] },
+  { name: 'The Lost Kitchen',   domain: 'findthelostkitchen.com', from: 'frontdesk@findthelostkitchen.com', keywords: ['lost kitchen', 'findthelostkitchen'] },
 ]
 
 function matchProviders(q: string): Provider[] {

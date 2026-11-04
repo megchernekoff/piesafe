@@ -18,6 +18,7 @@ export const SUPPORTED_PROVIDERS = [
   { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  from: 'newsletter@kingarthurbaking.com',      keywords: ['king arthur', 'king arthur baking'] },
   { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',         keywords: ['simply recipes', 'simplyrecipes'] },
   { name: 'What to Cook',       domain: 'substack.com',          from: 'whattocook@substack.com',              keywords: ['what to cook', 'caro chambers', 'whattocook'] },
+  { name: 'The Lost Kitchen',   domain: 'findthelostkitchen.com', from: 'frontdesk@findthelostkitchen.com',     keywords: ['lost kitchen', 'findthelostkitchen'] },
 ]
 
 async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {

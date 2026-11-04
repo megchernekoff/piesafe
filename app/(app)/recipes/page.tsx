@@ -97,7 +97,7 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
             <button className="btn-ghost" style={{ padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}
               onClick={() => setServings(s => s + 1)}>+</button>
             {scale !== 1 && (
-              <button className="btn-ghost" style={{ fontSize: '0.7rem', color: 'var(--clay)' }}
+              <button className="btn-ghost" style={{ fontSize: '0.7rem', color: 'var(--ochre)' }}
                 onClick={() => setServings(originalServings)}>reset</button>
             )}
           </div>
@@ -196,8 +196,8 @@ function RecipeChat({ recipe }: { recipe: Recipe }) {
             <div key={i} style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '88%',
-              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
-              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              background: m.role === 'user' ? 'var(--lavender)' : 'var(--stone)',
+              color: m.role === 'user' ? 'var(--stone)' : 'var(--ink)',
               borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
               padding: '0.6rem 0.9rem',
               fontSize: '0.85rem',
@@ -208,7 +208,7 @@ function RecipeChat({ recipe }: { recipe: Recipe }) {
             </div>
           ))}
           {thinking && (
-            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+            <div style={{ alignSelf: 'flex-start', background: 'var(--stone)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
               <span className="spinner" style={{ width: 14, height: 14 }} />
             </div>
           )}
@@ -389,12 +389,12 @@ export default function RecipesPage() {
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
-                border: '2px dashed var(--linen-dark)',
+                border: '2px dashed var(--stone-dark)',
                 borderRadius: 10,
                 padding: '2rem',
                 textAlign: 'center',
                 cursor: 'pointer',
-                background: imagePreview ? 'transparent' : 'var(--linen)',
+                background: imagePreview ? 'transparent' : 'var(--stone)',
                 marginBottom: '0.75rem',
               }}
               onDragOver={e => e.preventDefault()}
@@ -415,7 +415,7 @@ export default function RecipesPage() {
                   style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 8, margin: '0 auto', display: 'block' }} />
               ) : (
                 <>
-                  <Upload size={28} style={{ color: 'var(--clay)', margin: '0 auto 0.5rem', display: 'block' }} />
+                  <Upload size={28} style={{ color: 'var(--ochre)', margin: '0 auto 0.5rem', display: 'block' }} />
                   <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)' }}>Click to choose a photo, or drag one here</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>JPG, PNG, WEBP</p>
                 </>
@@ -479,7 +479,7 @@ export default function RecipesPage() {
                 {r.prep_time && <span>{r.prep_time}m prep</span>}
                 {r.cook_time && <span>{r.cook_time}m cook</span>}
                 {isLink && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--clay)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--ochre)' }}>
                     <ExternalLink size={11} /> {new URL(r.source_url!).hostname.replace('www.', '')}
                   </span>
                 )}

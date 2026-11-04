@@ -83,8 +83,8 @@ function DinnerChat({ dinner }: { dinner: Dinner }) {
             <div key={i} style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '88%',
-              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
-              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              background: m.role === 'user' ? 'var(--lavender)' : 'var(--stone)',
+              color: m.role === 'user' ? 'var(--stone)' : 'var(--ink)',
               borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
               padding: '0.6rem 0.9rem',
               fontSize: '0.85rem',
@@ -95,7 +95,7 @@ function DinnerChat({ dinner }: { dinner: Dinner }) {
             </div>
           ))}
           {thinking && (
-            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+            <div style={{ alignSelf: 'flex-start', background: 'var(--stone)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
               <span className="spinner" style={{ width: 14, height: 14 }} />
             </div>
           )}
@@ -168,7 +168,7 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
             onClick={saveToBox}
             disabled={saving || saved}
             className={saved ? 'btn-secondary' : 'btn-secondary'}
-            style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.85rem', color: saved ? 'var(--rosemary)' : undefined }}>
+            style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.85rem', color: saved ? 'var(--lavender)' : undefined }}>
             {saved
               ? <><Check size={12} /> Saved to box</>
               : saving
@@ -266,8 +266,8 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
             <div key={i} style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '90%',
-              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
-              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              background: m.role === 'user' ? 'var(--lavender)' : 'var(--stone)',
+              color: m.role === 'user' ? 'var(--stone)' : 'var(--ink)',
               borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
               padding: '0.6rem 0.9rem',
               fontSize: '0.85rem',
@@ -278,7 +278,7 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
             </div>
           ))}
           {thinking && (
-            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+            <div style={{ alignSelf: 'flex-start', background: 'var(--stone)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
               <span className="spinner" style={{ width: 14, height: 14 }} />
             </div>
           )}
@@ -287,7 +287,7 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
       )}
 
       {savedToast.length > 0 && (
-        <div style={{ background: 'var(--rosemary)', color: 'var(--linen)', borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+        <div style={{ background: 'var(--lavender)', color: 'var(--stone)', borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
           ✓ Added to your dislikes: {savedToast.join(', ')} — future plans will avoid {savedToast.length === 1 ? 'it' : 'them'}.
         </div>
       )}
@@ -518,7 +518,7 @@ export default function PlanPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {plan.prep_notes.map((note, i) => (
                     <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--clay)', fontSize: '1.2rem', lineHeight: 1.1, flexShrink: 0 }}>·</span>
+                      <span style={{ color: 'var(--ochre)', fontSize: '1.2rem', lineHeight: 1.1, flexShrink: 0 }}>·</span>
                       <span style={{ fontSize: '0.875rem', lineHeight: 1.65 }}>{note}</span>
                     </div>
                   ))}

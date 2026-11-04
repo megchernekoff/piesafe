@@ -27,21 +27,21 @@ export default async function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem', maxWidth: '700px' }}>
         <Link href="/recipes" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer' }}>
-            <BookOpen size={20} style={{ color: 'var(--clay)', marginBottom: '0.75rem' }} />
+            <BookOpen size={20} style={{ color: 'var(--ochre)', marginBottom: '0.75rem' }} />
             <h3>Recipe Library</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>Browse and save recipes</p>
           </div>
         </Link>
         <Link href="/plan" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer' }}>
-            <Calendar size={20} style={{ color: 'var(--clay)', marginBottom: '0.75rem' }} />
+            <Calendar size={20} style={{ color: 'var(--ochre)', marginBottom: '0.75rem' }} />
             <h3>Meal Plan</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>Generate this week&apos;s dinners</p>
           </div>
         </Link>
         <Link href="/plan" style={{ textDecoration: 'none' }}>
           <div className="card" style={{ cursor: 'pointer' }}>
-            <ShoppingCart size={20} style={{ color: 'var(--clay)', marginBottom: '0.75rem' }} />
+            <ShoppingCart size={20} style={{ color: 'var(--ochre)', marginBottom: '0.75rem' }} />
             <h3>Grocery List</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>This week&apos;s shopping list</p>
           </div>

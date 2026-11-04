@@ -45,10 +45,10 @@ export default function OnboardingPage() {
 
   if (step === 'welcome') {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--warm-white)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--wheat)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: '480px', padding: '2rem', textAlign: 'center' }}>
           <div className="serif" style={{ fontSize: '2.5rem', fontWeight: 300, color: 'var(--ink)', marginBottom: '1rem' }}>
-            Welcome to Pie <span style={{ color: 'var(--clay)' }}>Safe</span>
+            Welcome to Pie <span style={{ color: 'var(--ochre)' }}>Safe</span>
           </div>
           <p style={{ color: 'var(--ink-light)', lineHeight: 1.7, marginBottom: '2rem' }}>
             Let&apos;s set up your household profile so we can plan meals your whole family will love.
@@ -63,7 +63,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--warm-white)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '4rem 1.5rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--wheat)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '4rem 1.5rem' }}>
       <div style={{ width: '100%', maxWidth: '540px' }}>
         <div className="serif" style={{ fontSize: '2rem', fontWeight: 300, marginBottom: '0.5rem' }}>
           Your household

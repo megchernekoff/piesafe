@@ -13,10 +13,10 @@ export default async function LandingPage() {
   const { userId } = await auth()
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--warm-white)' }}>
-      <nav style={{ padding: '1.5rem 3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--linen-dark)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--wheat)' }}>
+      <nav style={{ padding: '1.5rem 3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--stone-dark)' }}>
         <span className="serif" style={{ fontSize: '1.8rem', fontWeight: 300, color: 'var(--ink)' }}>
-          Pie <span style={{ color: 'var(--clay)' }}>Safe</span>
+          Pie <span style={{ color: 'var(--ochre)' }}>Safe</span>
         </span>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           {userId ? (
@@ -61,7 +61,7 @@ export default async function LandingPage() {
       <section style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 2rem 6rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.25rem' }}>
         {FEATURES.map(({ icon: Icon, title, desc }) => (
           <div key={title} className="card">
-            <Icon size={20} style={{ color: 'var(--clay)', marginBottom: '0.75rem' }} />
+            <Icon size={20} style={{ color: 'var(--ochre)', marginBottom: '0.75rem' }} />
             <h3 style={{ marginBottom: '0.4rem' }}>{title}</h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', lineHeight: 1.65 }}>{desc}</p>
           </div>

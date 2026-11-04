@@ -17,9 +17,50 @@ interface Recipe {
   created_at: string
 }
 
+// Convert a decimal to a readable fraction string e.g. 0.5 → "½"
+function toFraction(n: number): string {
+  if (n === 0) return '0'
+  const whole = Math.floor(n)
+  const dec = n - whole
+  const fracs: [number, string][] = [[1/8,'⅛'],[1/4,'¼'],[1/3,'⅓'],[3/8,'⅜'],[1/2,'½'],[5/8,'⅝'],[2/3,'⅔'],[3/4,'¾'],[7/8,'⅞']]
+  let frac = ''
+  for (const [val, sym] of fracs) {
+    if (Math.abs(dec - val) < 0.07) { frac = sym; break }
+  }
+  if (whole === 0) return frac || n.toFixed(1).replace(/\.0$/, '')
+  return frac ? `${whole} ${frac}` : n % 1 < 0.05 ? String(whole) : n.toFixed(1).replace(/\.0$/, '')
+}
+
+// Scale numbers inside an ingredient string by a factor
+function scaleIngredient(text: string, factor: number): string {
+  if (factor === 1) return text
+  // Match whole numbers, decimals, and simple fractions like 1/2 or 1 1/2
+  return text.replace(/(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)/g, (match) => {
+    let val: number
+    if (match.includes('/')) {
+      const parts = match.trim().split(/\s+/)
+      if (parts.length === 2) {
+        // mixed number: "1 1/2"
+        const [num, den] = parts[1].split('/')
+        val = parseInt(parts[0]) + parseInt(num) / parseInt(den)
+      } else {
+        const [num, den] = parts[0].split('/')
+        val = parseInt(num) / parseInt(den)
+      }
+    } else {
+      val = parseFloat(match)
+    }
+    if (isNaN(val)) return match
+    return toFraction(val * factor)
+  })
+}
+
 // Panel only used for photo-imported recipes that have full data
 function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: () => void; onDelete: () => void }) {
   const [deleting, setDeleting] = useState(false)
+  const [servings, setServings] = useState(recipe.servings ?? 4)
+  const originalServings = recipe.servings ?? 4
+  const scale = servings / originalServings
 
   async function handleDelete() {
     setDeleting(true)
@@ -44,10 +85,22 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
           <p style={{ color: 'var(--ink-light)', fontSize: '0.9rem', lineHeight: 1.6 }}>{recipe.description}</p>
         )}
 
-        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--ink-light)', flexWrap: 'wrap' }}>
+        {/* Timing + serving adjuster */}
+        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--ink-light)', flexWrap: 'wrap', alignItems: 'center' }}>
           {recipe.prep_time && <span>Prep {recipe.prep_time}m</span>}
           {recipe.cook_time && <span>Cook {recipe.cook_time}m</span>}
-          {recipe.servings && <span>Serves {recipe.servings}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>Serves</span>
+            <button className="btn-ghost" style={{ padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}
+              onClick={() => setServings(s => Math.max(1, s - 1))}>−</button>
+            <span style={{ fontWeight: 600, color: 'var(--ink)', minWidth: '1.5rem', textAlign: 'center' }}>{servings}</span>
+            <button className="btn-ghost" style={{ padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}
+              onClick={() => setServings(s => s + 1)}>+</button>
+            {scale !== 1 && (
+              <button className="btn-ghost" style={{ fontSize: '0.7rem', color: 'var(--clay)' }}
+                onClick={() => setServings(originalServings)}>reset</button>
+            )}
+          </div>
         </div>
 
         {recipe.toddler_notes && (
@@ -60,7 +113,9 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
         <div>
           <div className="section-label">Ingredients</div>
           <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-            {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+            {recipe.ingredients.map((ing, i) => (
+              <li key={i}>{scaleIngredient(ing, scale)}</li>
+            ))}
           </ul>
         </div>
 

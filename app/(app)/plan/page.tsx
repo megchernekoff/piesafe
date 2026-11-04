@@ -18,6 +18,7 @@ interface DayPlan { day: string; date: string; dinner: Dinner | null }
 interface GroceryItem { item: string; amount: string; category: string }
 interface Plan {
   weekStart: string
+  rationale?: string
   days: DayPlan[]
   grocery_list: GroceryItem[]
   prep_notes: string[]
@@ -204,6 +205,109 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
   )
 }
 
+function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: string) => void }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, thinking])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || thinking) return
+    setInput('')
+    const history = messages.map(m => ({ role: m.role, content: m.content }))
+    setMessages(prev => [...prev, { role: 'user', content: text }])
+    setThinking(true)
+    const res = await fetch('/api/plan-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, message: text, history }),
+    })
+    const data = await res.json()
+    setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+    setThinking(false)
+  }
+
+  const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant')
+
+  const SUGGESTIONS = ['Make it lighter this week', 'Swap in something vegetarian', 'I want more variety']
+
+  return (
+    <div className="card" style={{ marginTop: '2rem' }}>
+      <div className="section-label" style={{ marginBottom: '0.75rem' }}>Tweak this plan</div>
+      <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '1rem' }}>
+        Ask for changes — swap a meal, adjust the vibe, work around what you have. When you're happy, regenerate.
+      </p>
+
+      {messages.length === 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {SUGGESTIONS.map(s => (
+            <button key={s} className="btn-secondary"
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
+              onClick={() => setInput(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {messages.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem', maxHeight: '300px', overflowY: 'auto' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{
+              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '90%',
+              background: m.role === 'user' ? 'var(--rosemary)' : 'var(--linen)',
+              color: m.role === 'user' ? 'var(--linen)' : 'var(--ink)',
+              borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+              padding: '0.6rem 0.9rem',
+              fontSize: '0.85rem',
+              lineHeight: 1.55,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {m.content}
+            </div>
+          ))}
+          {thinking && (
+            <div style={{ alignSelf: 'flex-start', background: 'var(--linen)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+              <span className="spinner" style={{ width: 14, height: 14 }} />
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: lastAssistantMessage ? '0.75rem' : 0 }}>
+        <input className="input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Swap Thursday, make it lighter, add a pasta night…"
+          style={{ flex: 1, fontSize: '0.85rem' }}
+        />
+        <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
+          style={{ padding: '0.65rem 0.85rem' }}>
+          <Send size={14} />
+        </button>
+      </div>
+
+      {lastAssistantMessage && (
+        <button className="btn-secondary" style={{ fontSize: '0.8rem' }}
+          onClick={() => {
+            const feedback = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')
+            onRegenerate(feedback)
+          }}>
+          <ChefHat size={13} /> Regenerate with this feedback
+        </button>
+      )}
+    </div>
+  )
+}
+
 const CATEGORY_ORDER = ['produce', 'protein', 'dairy', 'pantry', 'other']
 
 export default function PlanPage() {
@@ -221,12 +325,13 @@ export default function PlanPage() {
       .then(data => { if (data) setPlan(data) })
   }, [weekStart])
 
-  async function generate() {
+  async function generate(extraTweaks?: string) {
     setLoading(true)
+    const combinedTweaks = [tweaks, extraTweaks].filter(Boolean).join('\n')
     const res = await fetch('/api/meal-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, tweaks }),
+      body: JSON.stringify({ weekStart, tweaks: combinedTweaks }),
     })
     const data = await res.json()
     setPlan(data)
@@ -278,7 +383,7 @@ export default function PlanPage() {
             onKeyDown={e => e.key === 'Enter' && generate()}
           />
         </div>
-        <button className="btn-primary" onClick={generate} disabled={loading}>
+        <button className="btn-primary" onClick={() => generate()} disabled={loading}>
           {loading
             ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Generating…</>
             : <><ChefHat size={14} /> Generate Plan</>}
@@ -302,7 +407,7 @@ export default function PlanPage() {
 
       {plan && !loading && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: plan.rationale ? '0.75rem' : '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <h2 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300 }}>{weekLabel()}</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {(['plan', 'grocery', 'prep'] as const).map(v => (
@@ -317,6 +422,12 @@ export default function PlanPage() {
               ))}
             </div>
           </div>
+
+          {plan.rationale && (
+            <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', fontStyle: 'italic', lineHeight: 1.65, marginBottom: '1.25rem', maxWidth: '680px' }}>
+              {plan.rationale}
+            </p>
+          )}
 
           {view === 'plan' && (
             <div className="plan-grid">
@@ -390,6 +501,8 @@ export default function PlanPage() {
               </div>
             </div>
           )}
+
+          <PlanChat plan={plan} onRegenerate={generate} />
         </>
       )}
     </div>

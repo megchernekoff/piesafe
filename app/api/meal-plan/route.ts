@@ -108,6 +108,7 @@ Week: ${days.map(d => `${d.name} ${d.date}`).join(', ')}.
 
 Return a JSON object. Be concise — keep ingredients to one line each, instructions to one sentence each:
 {
+  "rationale": "2-3 sentences explaining why you chose these meals — mention variety, any saved recipes used, how preferences were respected.",
   "days": [
     {
       "day": "Monday",
@@ -140,7 +141,7 @@ Make varied, delicious, practical meals. Return only valid JSON, no markdown.`
   })
 
   const rawText = (message.content[0] as { text: string }).text
-  let plan: { days: unknown[]; grocery_list: unknown[]; prep_notes: unknown[] }
+  let plan: { rationale?: string; days: unknown[]; grocery_list: unknown[]; prep_notes: unknown[] }
   try {
     plan = JSON.parse(extractJSON(rawText))
   } catch {
@@ -148,7 +149,6 @@ Make varied, delicious, practical meals. Return only valid JSON, no markdown.`
     return NextResponse.json({ error: 'Failed to parse meal plan from AI response.' }, { status: 500 })
   }
 
-  // Replace any existing plan for this week
   await db.execute({
     sql: 'DELETE FROM meal_plans WHERE user_id = ? AND week_start_date = ?',
     args: [userId, weekStart],

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
 
-interface Provider { name: string; domain: string; keywords: string[] }
+interface Provider { name: string; domain: string; from?: string; keywords: string[] }
 interface SavedProvider { name: string; domain: string }
 interface DigestRecipe { title: string; description: string }
 interface Digest {
@@ -17,17 +17,17 @@ interface Digest {
 }
 
 const SUPPORTED_PROVIDERS: Provider[] = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
-  { name: 'Serious Eats',       domain: 'seriouseats.com',       keywords: ['serious eats'] },
-  { name: 'Bon Appétit',        domain: 'bonappetit.com',        keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
-  { name: 'Food52',             domain: 'food52.com',            keywords: ['food52'] },
-  { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  keywords: ['half baked harvest'] },
-  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    keywords: ['smitten kitchen'] },
-  { name: 'The Kitchn',         domain: 'thekitchn.com',         keywords: ['kitchn'] },
-  { name: 'Epicurious',         domain: 'epicurious.com',        keywords: ['epicurious'] },
-  { name: 'Budget Bytes',       domain: 'budgetbytes.com',       keywords: ['budget bytes'] },
-  { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  keywords: ['king arthur'] },
-  { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     keywords: ['simply recipes'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: 'nytdirect@nytimes.com',           keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',     keywords: ['serious eats'] },
+  { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',       keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
+  { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                keywords: ['food52'] },
+  { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com', keywords: ['half baked harvest'] },
+  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    from: 'email@smittenkitchen.com',        keywords: ['smitten kitchen'] },
+  { name: 'The Kitchn',         domain: 'thekitchn.com',         from: 'newsletter@thekitchn.com',        keywords: ['kitchn'] },
+  { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',           keywords: ['epicurious'] },
+  { name: 'Budget Bytes',       domain: 'budgetbytes.com',       from: 'hello@budgetbytes.com',           keywords: ['budget bytes'] },
+  { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  from: 'newsletter@kingarthurbaking.com', keywords: ['king arthur'] },
+  { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',    keywords: ['simply recipes'] },
 ]
 
 function matchProviders(q: string): Provider[] {

@@ -6,17 +6,17 @@ import { db } from '@/lib/db'
 const anthropic = new Anthropic()
 
 export const SUPPORTED_PROVIDERS = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
-  { name: 'Serious Eats',       domain: 'seriouseats.com',       keywords: ['serious eats', 'seriouseats'] },
-  { name: 'Bon Appétit',        domain: 'bonappetit.com',        keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
-  { name: 'Food52',             domain: 'food52.com',            keywords: ['food52'] },
-  { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  keywords: ['half baked harvest', 'halfbakedharvest'] },
-  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    keywords: ['smitten kitchen', 'smittenkitchen'] },
-  { name: 'The Kitchn',         domain: 'thekitchn.com',         keywords: ['the kitchn', 'kitchn'] },
-  { name: 'Epicurious',         domain: 'epicurious.com',        keywords: ['epicurious'] },
-  { name: 'Budget Bytes',       domain: 'budgetbytes.com',       keywords: ['budget bytes', 'budgetbytes'] },
-  { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  keywords: ['king arthur', 'king arthur baking'] },
-  { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     keywords: ['simply recipes', 'simplyrecipes'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: 'nytdirect@nytimes.com',                keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',          keywords: ['serious eats', 'seriouseats'] },
+  { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',            keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
+  { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                     keywords: ['food52'] },
+  { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com',      keywords: ['half baked harvest', 'halfbakedharvest'] },
+  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    from: 'email@smittenkitchen.com',             keywords: ['smitten kitchen', 'smittenkitchen'] },
+  { name: 'The Kitchn',         domain: 'thekitchn.com',         from: 'newsletter@thekitchn.com',             keywords: ['the kitchn', 'kitchn'] },
+  { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',                keywords: ['epicurious'] },
+  { name: 'Budget Bytes',       domain: 'budgetbytes.com',       from: 'hello@budgetbytes.com',                keywords: ['budget bytes', 'budgetbytes'] },
+  { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  from: 'newsletter@kingarthurbaking.com',      keywords: ['king arthur', 'king arthur baking'] },
+  { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',         keywords: ['simply recipes', 'simplyrecipes'] },
 ]
 
 async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {
@@ -92,10 +92,13 @@ export async function POST(req: NextRequest) {
   })
   const seenIds = new Set(existing.rows.map(r => r.gmail_id as string))
 
-  // Search for emails from the specified domain in the last 30 days
+  // Find the specific from address for this provider if we have it
+  const provider = SUPPORTED_PROVIDERS.find(p => p.domain === domain)
+  const fromQuery = provider?.from ? `from:${provider.from}` : `from:${domain}`
+
   const after = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)
-  const query = `from:${domain} after:${after}`
-  console.log(`Scanning Gmail for domain:${domain} query:"${query}"`)
+  const query = `${fromQuery} after:${after}`
+  console.log(`Scanning Gmail: "${query}"`)
   void providerName
 
   const pageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=3${pageToken ? `&pageToken=${pageToken}` : ''}`

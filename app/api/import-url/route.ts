@@ -94,7 +94,8 @@ export async function POST(req: NextRequest) {
   const structured = extractStructuredRecipe(html)
   if (structured) {
     const recipe = parseStructuredRecipe(structured)
-    if (recipe.title && recipe.ingredients.length > 0) {
+    // Only save if we got a real title and at least 2 ingredients
+    if (recipe.title && recipe.title !== 'Unknown' && recipe.ingredients.length >= 2) {
       await db.execute({
         sql: `INSERT INTO recipes
                 (user_id, title, description, ingredients, instructions, source_url, tags, prep_time, cook_time, servings)
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     .replace(/\s+/g, ' ').trim().slice(0, 8000)
 
   if (text.length < 200) {
-    return NextResponse.json({ error: 'This site blocked the import. Try copying the recipe URL from a different site, or use the photo import instead.' }, { status: 422 })
+    return NextResponse.json({ error: 'This site blocked the import. Try a different recipe site, or use the photo import instead.' }, { status: 422 })
   }
 
   const message = await anthropic.messages.create({

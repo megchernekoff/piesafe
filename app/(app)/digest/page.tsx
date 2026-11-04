@@ -181,7 +181,8 @@ export default function DigestPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ digestId: digest.gmail_id, recipes }),
     })
-    setSavedIds(prev => [...prev, digest.gmail_id])
+    // Auto-dismiss after saving — no need to keep it around
+    setDigests(prev => prev.filter(d => d.gmail_id !== digest.gmail_id))
     setSaving(null)
     setToast(`${recipes.length} recipe${recipes.length > 1 ? 's' : ''} saved to your Recipe Box!`)
     setTimeout(() => setToast(''), 3000)

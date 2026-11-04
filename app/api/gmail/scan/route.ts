@@ -194,13 +194,15 @@ export async function GET() {
     args: [userId],
   })
 
-  return NextResponse.json(result.rows.map(r => ({
-    id: String(r.id ?? ''),
-    gmail_id: String(r.gmail_id ?? ''),
-    sender: String(r.sender ?? ''),
-    subject: String(r.subject ?? ''),
-    date: String(r.date ?? ''),
-    summary: JSON.parse((r.summary as string) || '[]'),
-    saved: Number(r.saved ?? 0),
-  })))
+  return NextResponse.json(result.rows
+    .filter(r => Number(r.saved ?? 0) === 0)
+    .map(r => ({
+      id: String(r.id ?? ''),
+      gmail_id: String(r.gmail_id ?? ''),
+      sender: String(r.sender ?? ''),
+      subject: String(r.subject ?? ''),
+      date: String(r.date ?? ''),
+      summary: JSON.parse((r.summary as string) || '[]'),
+      saved: 0,
+    })))
 }

@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { weekStart, tweaks } = await req.json()
+  const { weekStart, tweaks, nights = 7 } = await req.json()
   if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
 
   const [profileResult, recipesResult] = await Promise.all([
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   const monday = getMonday(weekStart)
   const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-  const days = DAY_NAMES.map((name, i) => {
+  const days = DAY_NAMES.slice(0, nights).map((name, i) => {
     const d = new Date(monday)
     d.setDate(d.getDate() + i)
     return { name, date: d.toISOString().split('T')[0] }
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       ).join('\n')}\nFor any saved recipe you use, copy its exact ingredients and instructions from above.\n`
     : ''
 
-  const prompt = `Generate a 7-day dinner meal plan for a household of ${householdSize} people.
+  const prompt = `Generate a ${nights}-day dinner meal plan for a household of ${householdSize} people.
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
 ${dislikes.length ? `Never use these ingredients: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}

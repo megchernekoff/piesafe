@@ -323,6 +323,7 @@ const CATEGORY_ORDER = ['produce', 'protein', 'dairy', 'pantry', 'other']
 
 export default function PlanPage() {
   const [weekStart, setWeekStart] = useState(getMonday)
+  const [nights, setNights] = useState(7)
   const [tweaks, setTweaks] = useState('')
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
@@ -342,7 +343,7 @@ export default function PlanPage() {
     const res = await fetch('/api/meal-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, tweaks: combinedTweaks }),
+      body: JSON.stringify({ weekStart, tweaks: combinedTweaks, nights }),
     })
     const data = await res.json()
     setPlan(data)
@@ -384,6 +385,19 @@ export default function PlanPage() {
           <input type="date" className="input" value={weekStart}
             onChange={e => { setWeekStart(e.target.value); setPlan(null) }}
             style={{ maxWidth: '180px' }} />
+        </div>
+        <div>
+          <div className="section-label">Nights</div>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            {[1,2,3,4,5,6,7].map(n => (
+              <button key={n} type="button"
+                onClick={() => setNights(n)}
+                className={nights === n ? 'btn-primary' : 'btn-secondary'}
+                style={{ minWidth: '36px', padding: '0.45rem 0.5rem', fontSize: '0.875rem' }}>
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
         <div style={{ flex: 1, minWidth: '240px' }}>
           <div className="section-label">Special requests (optional)</div>

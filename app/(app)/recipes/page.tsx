@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { BookOpen, Link2, Loader2, Search, Trash2, X, ExternalLink, Camera, Upload } from 'lucide-react'
+import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink } from 'lucide-react'
 
 interface Recipe {
   id: string
@@ -17,6 +17,7 @@ interface Recipe {
   created_at: string
 }
 
+// Panel only used for photo-imported recipes that have full data
 function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: () => void; onDelete: () => void }) {
   const [deleting, setDeleting] = useState(false)
 
@@ -51,43 +52,24 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
 
         {recipe.toddler_notes && (
           <div style={{ background: '#fef3e2', borderRadius: 8, padding: '0.75rem 1rem' }}>
-            <div className="toddler-badge" style={{ marginBottom: '0.4rem', display: 'inline-flex' }}>
-              Toddler adaptation
-            </div>
+            <div className="toddler-badge" style={{ marginBottom: '0.4rem', display: 'inline-flex' }}>Toddler adaptation</div>
             <p style={{ fontSize: '0.85rem', color: '#7a4a00' }}>{recipe.toddler_notes}</p>
           </div>
         )}
 
-        {recipe.ingredients.length > 0 && (
-          <div>
-            <div className="section-label">Ingredients</div>
-            <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-              {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
-            </ul>
-          </div>
-        )}
+        <div>
+          <div className="section-label">Ingredients</div>
+          <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+            {recipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+          </ul>
+        </div>
 
-        {recipe.instructions.length > 0 && (
-          <div>
-            <div className="section-label">Instructions</div>
-            <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
-              {recipe.instructions.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
-            </ol>
-          </div>
-        )}
-
-        {recipe.ingredients.length === 0 && recipe.source_url && (
-          <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
-            Full recipe at the source link below.
-          </p>
-        )}
-
-        {recipe.source_url && (
-          <a href={recipe.source_url} target="_blank" rel="noopener"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--lavender)', marginTop: 'auto' }}>
-            <ExternalLink size={12} /> Source
-          </a>
-        )}
+        <div>
+          <div className="section-label">Instructions</div>
+          <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
+            {recipe.instructions.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
+          </ol>
+        </div>
 
         <hr className="divider" />
         <button className="btn-ghost" onClick={handleDelete} disabled={deleting}
@@ -109,12 +91,10 @@ export default function RecipesPage() {
   const [selected, setSelected] = useState<Recipe | null>(null)
   const [importTab, setImportTab] = useState<ImportTab>('url')
 
-  // URL import
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
 
-  // Photo import
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [importingPhoto, setImportingPhoto] = useState(false)
@@ -178,13 +158,29 @@ export default function RecipesPage() {
     setImportingPhoto(false)
   }
 
+  async function handleDelete(id: string) {
+    await fetch(`/api/recipes?id=${id}`, { method: 'DELETE' })
+    setSelected(null)
+    load()
+  }
+
+  function handleCardClick(recipe: Recipe) {
+    if (recipe.source_url && recipe.ingredients.length === 0) {
+      // Link-only recipe — go straight to the source
+      window.open(recipe.source_url, '_blank', 'noopener')
+    } else {
+      // Photo-imported recipe with full data — open panel
+      setSelected(recipe)
+    }
+  }
+
   return (
     <div>
       {selected && (
         <RecipePanel
           recipe={selected}
           onClose={() => setSelected(null)}
-          onDelete={() => { setSelected(null); load() }}
+          onDelete={() => handleDelete(selected.id)}
         />
       )}
 
@@ -195,7 +191,6 @@ export default function RecipesPage() {
 
       {/* Import card */}
       <div className="card" style={{ maxWidth: '640px', marginBottom: '2rem' }}>
-        {/* Tab switcher */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
           <button
             onClick={() => { setImportTab('url'); setImportError(''); setPhotoError('') }}
@@ -211,7 +206,6 @@ export default function RecipesPage() {
           </button>
         </div>
 
-        {/* URL import */}
         {importTab === 'url' && (
           <div>
             <div className="section-label" style={{ marginBottom: '0.75rem' }}>Save a recipe from any website</div>
@@ -225,8 +219,8 @@ export default function RecipesPage() {
               />
               <button className="btn-primary" onClick={handleImportUrl} disabled={importing || !importUrl.trim()}>
                 {importing
-                  ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Importing…</>
-                  : <><Link2 size={14} /> Import</>}
+                  ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
+                  : <><Link2 size={14} /> Save</>}
               </button>
             </div>
             {importError && (
@@ -235,25 +229,21 @@ export default function RecipesPage() {
           </div>
         )}
 
-        {/* Photo import */}
         {importTab === 'photo' && (
           <div>
             <div className="section-label" style={{ marginBottom: '0.75rem' }}>Upload a photo of a recipe</div>
             <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '0.75rem' }}>
               Works with cookbook pages, recipe cards, handwritten notes, or screenshots.
             </p>
-
-            {/* Drop zone */}
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
-                border: `2px dashed var(--linen-dark)`,
+                border: '2px dashed var(--linen-dark)',
                 borderRadius: 10,
                 padding: '2rem',
                 textAlign: 'center',
                 cursor: 'pointer',
                 background: imagePreview ? 'transparent' : 'var(--linen)',
-                transition: 'border-color 0.15s',
                 marginBottom: '0.75rem',
               }}
               onDragOver={e => e.preventDefault()}
@@ -275,37 +265,25 @@ export default function RecipesPage() {
               ) : (
                 <>
                   <Upload size={28} style={{ color: 'var(--clay)', margin: '0 auto 0.5rem', display: 'block' }} />
-                  <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)' }}>
-                    Click to choose a photo, or drag one here
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>
-                    JPG, PNG, WEBP
-                  </p>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)' }}>Click to choose a photo, or drag one here</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>JPG, PNG, WEBP</p>
                 </>
               )}
             </div>
-
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={handleFileChange} />
-
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-primary" onClick={handleImportPhoto}
-                disabled={importingPhoto || !imageFile}>
+              <button className="btn-primary" onClick={handleImportPhoto} disabled={importingPhoto || !imageFile}>
                 {importingPhoto
                   ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Reading recipe…</>
                   : <><Camera size={14} /> Import from photo</>}
               </button>
               {imagePreview && (
                 <button className="btn-secondary" onClick={() => {
-                  setImageFile(null)
-                  setImagePreview(null)
+                  setImageFile(null); setImagePreview(null)
                   if (fileInputRef.current) fileInputRef.current.value = ''
-                }}>
-                  Clear
-                </button>
+                }}>Clear</button>
               )}
             </div>
-
             {photoError && (
               <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{photoError}</p>
             )}
@@ -320,40 +298,51 @@ export default function RecipesPage() {
           placeholder="Search recipes…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
-      {/* Grid */}
-      {loading && (
-        <div className="empty-state">
-          <div className="spinner" style={{ width: 32, height: 32 }} />
-        </div>
-      )}
+      {loading && <div className="empty-state"><div className="spinner" style={{ width: 32, height: 32 }} /></div>}
 
       {!loading && recipes.length === 0 && (
         <div className="empty-state">
           <BookOpen size={40} />
           <h3>No recipes yet</h3>
-          <p>Import one from a URL or a photo above.</p>
+          <p>Save one from a URL or upload a photo above.</p>
         </div>
       )}
 
       <div className="recipe-grid">
-        {recipes.map(r => (
-          <div key={r.id} className="card" style={{ cursor: 'pointer' }} onClick={() => setSelected(r)}>
-            <h3 className="serif" style={{ fontSize: '1.2rem', fontWeight: 400 }}>{r.title}</h3>
-            {r.description && (
-              <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginTop: '0.4rem', lineHeight: 1.5 }}>
-                {r.description.slice(0, 100)}{r.description.length > 100 ? '…' : ''}
-              </p>
-            )}
-            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              {r.tags.slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
+        {recipes.map(r => {
+          const isLink = r.source_url && r.ingredients.length === 0
+          return (
+            <div key={r.id} className="card"
+              style={{ cursor: 'pointer', position: 'relative' }}
+              onClick={() => handleCardClick(r)}>
+              <h3 className="serif" style={{ fontSize: '1.2rem', fontWeight: 400, paddingRight: '1.5rem' }}>{r.title}</h3>
+              {r.description && (
+                <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginTop: '0.4rem', lineHeight: 1.5 }}>
+                  {r.description.slice(0, 100)}{r.description.length > 100 ? '…' : ''}
+                </p>
+              )}
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {r.tags.slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
+              </div>
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--ink-light)', alignItems: 'center' }}>
+                {r.prep_time && <span>{r.prep_time}m prep</span>}
+                {r.cook_time && <span>{r.cook_time}m cook</span>}
+                {isLink && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--clay)' }}>
+                    <ExternalLink size={11} /> {new URL(r.source_url!).hostname.replace('www.', '')}
+                  </span>
+                )}
+              </div>
+              {/* Subtle delete button in corner */}
+              <button
+                className="btn-ghost"
+                style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', padding: '0.25rem', color: 'var(--ink-light)', opacity: 0.4 }}
+                onClick={e => { e.stopPropagation(); handleDelete(r.id) }}>
+                <Trash2 size={13} />
+              </button>
             </div>
-            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--ink-light)' }}>
-              {r.prep_time && <span>{r.prep_time}m prep</span>}
-              {r.cook_time && <span>{r.cook_time}m cook</span>}
-              {r.source_url && <span style={{ color: 'var(--lavender)' }}>↗ imported</span>}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

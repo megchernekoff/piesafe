@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import * as cheerio from 'cheerio'
 import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
@@ -61,6 +62,67 @@ function extractBody(payload: Record<string, unknown>): string {
     }
   }
   return ''
+}
+
+function extractRecipeLinks(html: string, domain: string): string[] {
+  const $ = cheerio.load(html)
+  const links: string[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  $('a[href]').each((_: number, el: any) => {
+    const href = $(el).attr('href') || ''
+    try {
+      const u = new URL(href)
+      if (u.hostname.includes(domain) && u.pathname.includes('recipe')) {
+        const clean = `${u.origin}${u.pathname}`
+        if (!links.includes(clean)) links.push(clean)
+      }
+    } catch { /* skip */ }
+  })
+  return links.slice(0, 5) // max 5 recipe links per email
+}
+
+async function fetchJsonLd(url: string): Promise<{ title: string; description: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null } | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      signal: AbortSignal.timeout(8000),
+    })
+    const html = await res.text()
+    const $ = cheerio.load(html)
+    for (const el of $('script[type="application/ld+json"]').toArray()) {
+      try {
+        const json = JSON.parse($(el).html() || '')
+        const items = Array.isArray(json) ? json : [json]
+        for (const item of items) {
+          const r = item['@type'] === 'Recipe' ? item : item['@graph']?.find((n: Record<string, unknown>) => n['@type'] === 'Recipe')
+          if (!r) continue
+          const toArr = (v: unknown): string[] => {
+            if (!v) return []
+            if (Array.isArray(v)) return v.map((x: unknown) => typeof x === 'object' ? (x as Record<string, string>).text || '' : String(x)).filter(Boolean)
+            return [String(v)]
+          }
+          const toMin = (v: unknown) => {
+            if (!v) return null
+            const s = String(v); const h = s.match(/(\d+)H/)?.[1]; const m = s.match(/(\d+)M/)?.[1]
+            return (parseInt(h||'0')*60)+parseInt(m||'0')||null
+          }
+          const ingredients = toArr(r.recipeIngredient)
+          if (ingredients.length < 2) continue
+          return {
+            title: String(r.name || '').trim(),
+            description: String(r.description || '').trim(),
+            ingredients,
+            instructions: toArr(Array.isArray(r.recipeInstructions) ? r.recipeInstructions.map((s: Record<string,string>) => s.text||s) : r.recipeInstructions),
+            tags: toArr(r.keywords).flatMap((k: string) => k.split(',')).map((k: string) => k.trim()).filter(Boolean),
+            prep_time: toMin(r.prepTime),
+            cook_time: toMin(r.cookTime),
+            servings: parseInt(String(r.recipeYield||'0'))||null,
+          }
+        }
+      } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -138,26 +200,41 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const body = extractBody(msgData.payload ?? {})
-    const cleanText = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)
+    const rawHtml = extractBody(msgData.payload ?? {})
+    const cleanText = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000)
 
-    if (!cleanText || cleanText.length < 100) {
-      // Still save the email, just with no recipes
-      await db.execute({
-        sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)
-              VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
-        args: [userId, msg.id, from, subject, date, '[]'],
-      })
-      digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary: [], saved: 0 })
-      continue
+    // Try fetching full recipes via JSON-LD from links in the email
+    const recipeLinks = extractRecipeLinks(rawHtml, domain)
+    const fullRecipes: { title: string; description: string; url: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null }[] = []
+
+    for (const link of recipeLinks) {
+      const recipe = await fetchJsonLd(link)
+      if (recipe) fullRecipes.push({ ...recipe, url: link })
     }
 
-    const claudeRes = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: `This is a recipe newsletter email. Extract a list of the recipes or dishes mentioned.
+    let summary: { title: string; description: string; url?: string; ingredients?: string[]; instructions?: string[]; tags?: string[]; prep_time?: number | null; cook_time?: number | null; servings?: number | null }[] = []
+
+    if (fullRecipes.length > 0) {
+      // We got full recipes from JSON-LD — use those
+      summary = fullRecipes.map(r => ({
+        title: r.title,
+        description: r.description,
+        url: r.url,
+        ingredients: r.ingredients,
+        instructions: r.instructions,
+        tags: r.tags,
+        prep_time: r.prep_time,
+        cook_time: r.cook_time,
+        servings: r.servings,
+      }))
+    } else if (cleanText && cleanText.length >= 100) {
+      // Fall back to Claude parsing the email text
+      const claudeRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: `This is a recipe newsletter email. Extract a list of the recipes or dishes mentioned.
 Return a JSON array of objects, one per recipe found:
 [{ "title": "Recipe name", "description": "One short sentence about it" }]
 If no recipes are mentioned, return [].
@@ -166,15 +243,14 @@ Return only valid JSON.
 Email subject: ${subject}
 Email text:
 ${cleanText}`,
-      }],
-    })
-
-    let summary: { title: string; description: string }[] = []
-    try {
-      const raw = (claudeRes.content[0] as { text: string }).text
-      const match = raw.match(/\[[\s\S]*\]/)
-      if (match) summary = JSON.parse(match[0])
-    } catch { summary = [] }
+        }],
+      })
+      try {
+        const raw = (claudeRes.content[0] as { text: string }).text
+        const match = raw.match(/\[[\s\S]*\]/)
+        if (match) summary = JSON.parse(match[0])
+      } catch { summary = [] }
+    }
 
     await db.execute({
       sql: `INSERT INTO email_digests (user_id, gmail_id, sender, subject, date, summary)

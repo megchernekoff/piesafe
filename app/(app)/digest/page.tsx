@@ -22,7 +22,7 @@ const SUPPORTED_PROVIDERS: Provider[] = [
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',       keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                keywords: ['food52'] },
   { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com', keywords: ['half baked harvest'] },
-  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    from: 'email@smittenkitchen.com',        keywords: ['smitten kitchen'] },
+  { name: 'Smitten Kitchen',    domain: 'substack.com',          from: 'smittenkitchen@substack.com',     keywords: ['smitten kitchen', 'smittenkitchen'] },
   { name: 'The Kitchn',         domain: 'thekitchn.com',         from: 'newsletter@thekitchn.com',        keywords: ['kitchn'] },
   { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',           keywords: ['epicurious'] },
   { name: 'Budget Bytes',       domain: 'budgetbytes.com',       from: 'hello@budgetbytes.com',           keywords: ['budget bytes'] },
@@ -30,6 +30,7 @@ const SUPPORTED_PROVIDERS: Provider[] = [
   { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',    keywords: ['simply recipes'] },
   { name: 'What to Cook',       domain: 'substack.com',          from: 'whattocook@substack.com',         keywords: ['what to cook', 'caro chambers', 'whattocook'] },
   { name: 'The Lost Kitchen',   domain: 'findthelostkitchen.com', from: 'frontdesk@findthelostkitchen.com', keywords: ['lost kitchen', 'findthelostkitchen'] },
+  { name: 'Ina Garten',         domain: 'substack.com',          from: 'inagarten@substack.com',           keywords: ['ina garten', 'barefoot contessa', 'inagarten'] },
 ]
 
 function matchProviders(q: string): Provider[] {
@@ -215,6 +216,24 @@ export default function DigestPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+          {/* Provider pills — sources not yet added */}
+          {SUPPORTED_PROVIDERS.filter(p => !savedProviders.find(s => s.domain === p.domain)).length > 0 && (
+            <div style={{ maxWidth: '640px' }}>
+              <div className="section-label" style={{ marginBottom: '0.6rem' }}>Available sources</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {SUPPORTED_PROVIDERS
+                  .filter(p => !savedProviders.find(s => s.domain === p.domain && s.name === p.name))
+                  .map(p => (
+                    <button key={`${p.domain}-${p.name}`} className="btn-secondary"
+                      onClick={() => addProvider(p)}
+                      style={{ fontSize: '0.78rem', padding: '0.3rem 0.85rem' }}>
+                      + {p.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Add digest search */}
           <div style={{ maxWidth: '480px', position: 'relative' }}>

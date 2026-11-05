@@ -11,7 +11,7 @@ export const SUPPORTED_PROVIDERS = [
   { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',            keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                     keywords: ['food52'] },
   { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com',      keywords: ['half baked harvest', 'halfbakedharvest'] },
-  { name: 'Smitten Kitchen',    domain: 'smittenkitchen.com',    from: 'email@smittenkitchen.com',             keywords: ['smitten kitchen', 'smittenkitchen'] },
+  { name: 'Smitten Kitchen',    domain: 'substack.com',          from: 'smittenkitchen@substack.com',          keywords: ['smitten kitchen', 'smittenkitchen'] },
   { name: 'The Kitchn',         domain: 'thekitchn.com',         from: 'newsletter@thekitchn.com',             keywords: ['the kitchn', 'kitchn'] },
   { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',                keywords: ['epicurious'] },
   { name: 'Budget Bytes',       domain: 'budgetbytes.com',       from: 'hello@budgetbytes.com',                keywords: ['budget bytes', 'budgetbytes'] },
@@ -19,6 +19,7 @@ export const SUPPORTED_PROVIDERS = [
   { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',         keywords: ['simply recipes', 'simplyrecipes'] },
   { name: 'What to Cook',       domain: 'substack.com',          from: 'whattocook@substack.com',              keywords: ['what to cook', 'caro chambers', 'whattocook'] },
   { name: 'The Lost Kitchen',   domain: 'findthelostkitchen.com', from: 'frontdesk@findthelostkitchen.com',     keywords: ['lost kitchen', 'findthelostkitchen'] },
+  { name: 'Ina Garten',         domain: 'substack.com',          from: 'inagarten@substack.com',               keywords: ['ina garten', 'barefoot contessa', 'inagarten'] },
 ]
 
 async function refreshIfNeeded(userId: string, tokens: { access_token: string; refresh_token: string; expiry: number }) {

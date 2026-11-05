@@ -212,10 +212,13 @@ export async function POST(req: NextRequest) {
 
     // Try fetching full recipes via JSON-LD from links in the email
     const recipeLinks = extractRecipeLinks(rawHtml, domain)
+    console.log(`[scan] HTML length: ${rawHtml.length}, recipe links found: ${recipeLinks.length}`, recipeLinks)
     const fullRecipes: { title: string; description: string; url: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null }[] = []
 
     for (const link of recipeLinks) {
+      console.log(`[scan] Fetching JSON-LD from: ${link}`)
       const recipe = await fetchJsonLd(link)
+      console.log(`[scan] JSON-LD result for ${link}: ${recipe ? `✓ ${recipe.ingredients.length} ingredients` : '✗ none'}`)
       if (recipe) fullRecipes.push({ ...recipe, url: link })
     }
 

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { url } = await req.json()
+  const { url, updateId } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 })
 
   let title = titleFromUrl(url)
@@ -97,20 +97,18 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
 
       if (recipeName && ingredients.length >= 2) {
-        await db.execute({
-          sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags, prep_time, cook_time, servings)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          args: [
-            userId, recipeName, description, url,
-            JSON.stringify(ingredients),
-            JSON.stringify(instructions),
-            JSON.stringify(tags),
-            toMinutes(structured.prepTime),
-            toMinutes(structured.cookTime),
-            parseInt(String(structured.recipeYield || '0')) || null,
-          ],
-        })
-        return NextResponse.json({ success: true, full: true, recipe: { title: recipeName, source_url: url } })
+        if (updateId) {
+          await db.execute({
+            sql: `UPDATE recipes SET title=?, description=?, ingredients=?, instructions=?, tags=?, prep_time=?, cook_time=?, servings=? WHERE id=? AND user_id=?`,
+            args: [recipeName, description, JSON.stringify(ingredients), JSON.stringify(instructions), JSON.stringify(tags), toMinutes(structured.prepTime), toMinutes(structured.cookTime), parseInt(String(structured.recipeYield || '0')) || null, updateId, userId],
+          })
+        } else {
+          await db.execute({
+            sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags, prep_time, cook_time, servings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [userId, recipeName, description, url, JSON.stringify(ingredients), JSON.stringify(instructions), JSON.stringify(tags), toMinutes(structured.prepTime), toMinutes(structured.cookTime), parseInt(String(structured.recipeYield || '0')) || null],
+          })
+        }
+        return NextResponse.json({ success: true, full: true, recipe: { title: recipeName, description, source_url: url, ingredients, instructions, tags, prep_time: toMinutes(structured.prepTime), cook_time: toMinutes(structured.cookTime), servings: parseInt(String(structured.recipeYield || '0')) || null } })
       }
     }
   }

@@ -56,16 +56,34 @@ function scaleIngredient(text: string, factor: number): string {
 }
 
 // Panel only used for photo-imported recipes that have full data
-function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: () => void; onDelete: () => void }) {
+function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe; onClose: () => void; onDelete: () => void; onRefresh: (updated: Recipe) => void }) {
   const [deleting, setDeleting] = useState(false)
+  const [fetching, setFetching] = useState(false)
   const [servings, setServings] = useState(recipe.servings ?? 4)
   const originalServings = recipe.servings ?? 4
   const scale = servings / originalServings
+  const isEmpty = recipe.ingredients.length === 0 && recipe.source_url
 
   async function handleDelete() {
     setDeleting(true)
     await fetch(`/api/recipes?id=${recipe.id}`, { method: 'DELETE' })
     onDelete()
+  }
+
+  async function fetchFullRecipe() {
+    if (!recipe.source_url) return
+    setFetching(true)
+    // Re-import the URL to get full recipe, then update this record
+    const res = await fetch('/api/import-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: recipe.source_url, updateId: recipe.id }),
+    })
+    const data = await res.json()
+    if (data.success && data.full) {
+      onRefresh({ ...recipe, ...data.recipe })
+    }
+    setFetching(false)
   }
 
   return (
@@ -83,6 +101,15 @@ function RecipePanel({ recipe, onClose, onDelete }: { recipe: Recipe; onClose: (
 
         {recipe.description && (
           <p style={{ color: 'var(--ink-light)', fontSize: '0.9rem', lineHeight: 1.6 }}>{recipe.description}</p>
+        )}
+
+        {isEmpty && (
+          <button className="btn-secondary" onClick={fetchFullRecipe} disabled={fetching}
+            style={{ fontSize: '0.82rem', alignSelf: 'flex-start' }}>
+            {fetching
+              ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Fetching…</>
+              : '↻ Fetch full recipe'}
+          </button>
         )}
 
         {/* Timing + serving adjuster */}
@@ -332,6 +359,7 @@ export default function RecipesPage() {
           recipe={selected}
           onClose={() => setSelected(null)}
           onDelete={() => handleDelete(selected.id)}
+          onRefresh={(updated) => { setSelected(updated); setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r)) }}
         />
       )}
 

@@ -101,6 +101,21 @@ function extractRecipeLinks(html: string, domain: string): string[] {
   return [...new Set(links)].slice(0, 5)
 }
 
+// Search NYT Cooking for a recipe by title and return its URL
+async function searchNytRecipeUrl(title: string): Promise<string | null> {
+  try {
+    const searchUrl = `https://cooking.nytimes.com/search?q=${encodeURIComponent(title)}`
+    const res = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      signal: AbortSignal.timeout(8000),
+    })
+    const html = await res.text()
+    // Find first recipe URL in search results
+    const match = html.match(/https?:\/\/cooking\.nytimes\.com\/recipes\/[\w-]+/)
+    return match ? match[0] : null
+  } catch { return null }
+}
+
 async function fetchJsonLd(url: string): Promise<{ title: string; description: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null } | null> {
   try {
     const res = await fetch(url, {

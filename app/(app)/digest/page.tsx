@@ -5,7 +5,7 @@ import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'luc
 
 interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
 interface SavedProvider { name: string; domain: string }
-interface DigestRecipe { title: string; description: string }
+interface DigestRecipe { title: string; description: string; url?: string; ingredients?: string[]; instructions?: string[]; tags?: string[]; prep_time?: number | null; cook_time?: number | null; servings?: number | null }
 interface Digest {
   id: string
   gmail_id: string
@@ -352,19 +352,23 @@ export default function DigestPage() {
                         </p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {digest.summary.map((recipe, i) => (
-                            <label key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: isSaved ? 'default' : 'pointer', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
-                              {!isSaved && (
-                                <input type="checkbox" checked={selectedIndices.includes(i)}
-                                  onChange={() => toggleRecipe(digest.gmail_id, i)}
-                                  style={{ marginTop: '0.2rem', accentColor: 'var(--lavender)' }} />
-                              )}
-                              <div>
-                                <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
-                                {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
+                          {digest.summary.map((recipe, i) => {
+                            const hasFullRecipe = recipe.ingredients && recipe.ingredients.length > 0
+                            return (
+                              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.5rem 0.6rem', borderRadius: 8, background: selectedIndices.includes(i) ? 'var(--lavender-soft)' : 'transparent', transition: 'background 0.1s' }}>
+                                {!isSaved && (
+                                  <input type="checkbox" checked={selectedIndices.includes(i)}
+                                    onChange={() => toggleRecipe(digest.gmail_id, i)}
+                                    style={{ marginTop: '0.3rem', accentColor: 'var(--lavender)', cursor: 'pointer', flexShrink: 0 }} />
+                                )}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
+                                  {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
+                                  {hasFullRecipe && <div style={{ fontSize: '0.72rem', color: 'var(--olive)', marginTop: '0.2rem' }}>✓ Full recipe · {recipe.ingredients!.length} ingredients</div>}
+                                </div>
                               </div>
-                            </label>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
 

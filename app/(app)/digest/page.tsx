@@ -365,6 +365,13 @@ export default function DigestPage() {
                                   <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{recipe.title}</div>
                                   {recipe.description && <div style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{recipe.description}</div>}
                                   {hasFullRecipe && <div style={{ fontSize: '0.72rem', color: 'var(--olive)', marginTop: '0.2rem' }}>✓ Full recipe · {recipe.ingredients!.length} ingredients</div>}
+                                  {recipe.url && !hasFullRecipe && (
+                                    <a href={recipe.url} target="_blank" rel="noopener"
+                                      style={{ fontSize: '0.72rem', color: 'var(--lavender-muted)', marginTop: '0.2rem', display: 'inline-block' }}
+                                      onClick={e => e.stopPropagation()}>
+                                      ↗ View recipe
+                                    </a>
+                                  )}
                                 </div>
                               </div>
                             )

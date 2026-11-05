@@ -249,6 +249,15 @@ export async function POST(req: NextRequest) {
       if (recipe) fullRecipes.push({ ...recipe, url: link })
     }
 
+    // Build a map of anchor text → href for matching recipe titles to links
+    const $ = cheerio.load(rawHtml)
+    const anchorMap: { text: string; href: string }[] = []
+    $('a[href]').each((_: number, el: ReturnType<typeof $>[0]) => {
+      const href = $(el as Parameters<typeof $>[0]).attr('href') || ''
+      const text = $(el as Parameters<typeof $>[0]).text().trim()
+      if (href.startsWith('http') && text.length > 3) anchorMap.push({ text, href })
+    })
+
     let summary: { title: string; description: string; url?: string; ingredients?: string[]; instructions?: string[]; tags?: string[]; prep_time?: number | null; cook_time?: number | null; servings?: number | null }[] = []
 
     if (fullRecipes.length > 0) {
@@ -285,7 +294,18 @@ ${cleanText}`,
       try {
         const raw = (claudeRes.content[0] as { text: string }).text
         const match = raw.match(/\[[\s\S]*\]/)
-        if (match) summary = JSON.parse(match[0])
+        if (match) {
+          const parsed = JSON.parse(match[0])
+          // Try to find a matching link for each recipe title
+          summary = parsed.map((recipe: { title: string; description: string }) => {
+            const titleLower = recipe.title.toLowerCase()
+            const matched = anchorMap.find(a =>
+              a.text.toLowerCase().includes(titleLower.slice(0, 20)) ||
+              titleLower.includes(a.text.toLowerCase().slice(0, 20))
+            )
+            return { ...recipe, url: matched?.href ?? null }
+          })
+        }
       } catch { summary = [] }
     }
 

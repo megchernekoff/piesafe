@@ -51,17 +51,24 @@ function decodeBase64(str: string): string {
   return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
 }
 
-function extractBody(payload: Record<string, unknown>): string {
-  if (payload.body && (payload.body as Record<string, unknown>).data) {
+// Extract specific MIME type part from email payload
+function extractMimePart(payload: Record<string, unknown>, mimeType: string): string {
+  const mime = (payload.mimeType as string) || ''
+  if (mime === mimeType && payload.body && (payload.body as Record<string, unknown>).data) {
     return decodeBase64((payload.body as Record<string, string>).data)
   }
   if (payload.parts) {
     for (const part of payload.parts as Record<string, unknown>[]) {
-      const text = extractBody(part)
-      if (text) return text
+      const result = extractMimePart(part, mimeType)
+      if (result) return result
     }
   }
   return ''
+}
+
+// Get HTML body preferentially, fall back to plain text
+function extractBody(payload: Record<string, unknown>): string {
+  return extractMimePart(payload, 'text/html') || extractMimePart(payload, 'text/plain')
 }
 
 function extractRecipeLinks(html: string, domain: string): string[] {

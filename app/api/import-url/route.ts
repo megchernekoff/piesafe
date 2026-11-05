@@ -52,17 +52,28 @@ function toArray(val: unknown): string[] {
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { url, updateId } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 })
 
-  let title = titleFromUrl(url)
+  // Strip tracking/UTM parameters — use just the canonical path
+  let cleanUrl = url
+  try {
+    const u = new URL(url)
+    // Keep only non-tracking params (tracking params are things like utm_*, algo, campaign_id, emc, etc.)
+    const trackingParams = /^(utm_|algo|campaign_id|emc|imp_id|instance_id|nl|pool|regi_id|req_id|segment_id|surface|user_id|variant|fellback)/
+    u.searchParams.forEach((_, key) => { if (trackingParams.test(key)) u.searchParams.delete(key) })
+    cleanUrl = u.toString()
+  } catch { /* use original */ }
+
+  let title = titleFromUrl(cleanUrl)
   let html = ''
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(cleanUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -113,12 +124,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fall back to saving as bookmark with title + URL
+  // Fall back to saving as bookmark with title + clean URL
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, source_url, ingredients, instructions, tags)
           VALUES (?, ?, ?, ?, ?, ?)`,
-    args: [userId, title, url, JSON.stringify([]), JSON.stringify([]), JSON.stringify([])],
+    args: [userId, title, cleanUrl, JSON.stringify([]), JSON.stringify([]), JSON.stringify([])],
   })
 
-  return NextResponse.json({ success: true, full: false, recipe: { title, source_url: url } })
+  return NextResponse.json({ success: true, full: false, recipe: { title, source_url: cleanUrl } })
+  } catch (err) {
+    console.error('import-url error:', err)
+    return NextResponse.json({ error: 'Something went wrong importing that URL.' }, { status: 500 })
+  }
 }

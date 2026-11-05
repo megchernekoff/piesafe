@@ -212,13 +212,12 @@ export async function POST(req: NextRequest) {
 
     // Try fetching full recipes via JSON-LD from links in the email
     const recipeLinks = extractRecipeLinks(rawHtml, domain)
-    console.log(`[scan] HTML length: ${rawHtml.length}, recipe links found: ${recipeLinks.length}`, recipeLinks)
+    const debugInfo = { htmlLength: rawHtml.length, recipeLinks, jsonLdResults: [] as string[] }
     const fullRecipes: { title: string; description: string; url: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null }[] = []
 
     for (const link of recipeLinks) {
-      console.log(`[scan] Fetching JSON-LD from: ${link}`)
       const recipe = await fetchJsonLd(link)
-      console.log(`[scan] JSON-LD result for ${link}: ${recipe ? `✓ ${recipe.ingredients.length} ingredients` : '✗ none'}`)
+      debugInfo.jsonLdResults.push(recipe ? `✓ ${recipe.title} (${recipe.ingredients.length} ingredients)` : `✗ no recipe at ${link}`)
       if (recipe) fullRecipes.push({ ...recipe, url: link })
     }
 
@@ -268,7 +267,7 @@ ${cleanText}`,
       args: [userId, msg.id, from, subject, date, JSON.stringify(summary)],
     })
 
-    digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0 })
+    digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0, _debug: debugInfo })
   }
 
   return NextResponse.json({ digests, nextPageToken })

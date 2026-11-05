@@ -72,11 +72,23 @@ function extractBody(payload: Record<string, unknown>): string {
 }
 
 function extractRecipeLinks(html: string, domain: string): string[] {
-  const $ = cheerio.load(html)
   const links: string[] = []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  $('a[href]').each((_: number, el: any) => {
-    const href = $(el).attr('href') || ''
+
+  // Strategy 1: find direct recipe URLs embedded anywhere in the HTML (including inside redirect URLs)
+  const recipePattern = new RegExp(`https?://[\\w.-]*${domain.replace('.', '\\.')}/recipes/[\\w-]+`, 'g')
+  const directMatches = html.match(recipePattern) || []
+  for (const match of directMatches) {
+    try {
+      const u = new URL(match)
+      const clean = `${u.origin}${u.pathname}`
+      if (!links.includes(clean)) links.push(clean)
+    } catch { /* skip */ }
+  }
+
+  // Strategy 2: also check <a href> tags for any domain links with recipe in path
+  const $ = cheerio.load(html)
+  $('a[href]').each((_: number, el: ReturnType<typeof $>[0]) => {
+    const href = $(el as Parameters<typeof $>[0]).attr('href') || ''
     try {
       const u = new URL(href)
       if (u.hostname.includes(domain) && u.pathname.includes('recipe')) {
@@ -85,7 +97,8 @@ function extractRecipeLinks(html: string, domain: string): string[] {
       }
     } catch { /* skip */ }
   })
-  return links.slice(0, 5) // max 5 recipe links per email
+
+  return [...new Set(links)].slice(0, 5)
 }
 
 async function fetchJsonLd(url: string): Promise<{ title: string; description: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null } | null> {

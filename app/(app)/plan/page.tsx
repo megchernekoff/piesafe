@@ -283,7 +283,7 @@ function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; w
   )
 }
 
-function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: string) => void }) {
+function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenerate: (tweaks: string) => void; onPlanUpdate: (p: Plan) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
@@ -311,6 +311,15 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
     if (data.savedDislikes?.length > 0) {
       setSavedToast(data.savedDislikes)
       setTimeout(() => setSavedToast([]), 4000)
+    }
+    // Apply swap action — update the plan in place
+    if (data.swapAction?.recipe && data.swapAction?.day) {
+      onPlanUpdate({
+        ...plan,
+        days: plan.days.map((d: DayPlan) =>
+          d.day === data.swapAction.day ? { ...d, dinner: data.swapAction.recipe as unknown as Dinner } : d
+        ),
+      })
     }
     setThinking(false)
   }
@@ -695,7 +704,7 @@ export default function PlanPage() {
             </div>
           )}
 
-          <PlanChat plan={plan} onRegenerate={generate} />
+          <PlanChat plan={plan} onRegenerate={generate} onPlanUpdate={setPlan} />
         </>
       )}
     </div>

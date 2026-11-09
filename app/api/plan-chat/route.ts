@@ -43,11 +43,15 @@ ${mealSummary}
 ${savedRecipesBlock}
 ${plan.rationale ? `\nWhy this plan was chosen: ${plan.rationale}` : ''}
 
-When asked about a saved recipe, answer from the details above. If the user wants to swap one day, suggest a specific replacement. Be warm and practical. The "Regenerate entire plan" button rebuilds the whole week — only suggest it for major overhauls, not single-day swaps.
+When asked about a saved recipe, answer from the details above. Be warm and practical. The "Regenerate entire plan" button rebuilds the whole week — only suggest it for major overhauls.
 
-IMPORTANT: If the user expresses a food dislike or aversion (e.g. "I don't like polenta", "no more mushrooms", "I hate cilantro", "avoid shellfish"), you must:
-1. Acknowledge it warmly in your reply
-2. Return a JSON block at the very end of your response in this exact format:
+IMPORTANT — SWAPPING A DAY: If the user wants to put a specific saved recipe on a specific day (e.g. "put Baked Chicken Parmesan on Day 3", "use TJ's Salmon for Day 1"), you MUST:
+1. Confirm it in your reply ("Done! I've put Baked Chicken Parmesan on Day 3.")
+2. Return this block at the very end:
+<swap>{"day":"Day 3","recipeName":"Baked Chicken Parmesan"}</swap>
+Use the exact day name (Day 1, Day 2, etc.) and exact recipe title from the Recipe Box.
+
+IMPORTANT — FOOD DISLIKES: If the user expresses a food dislike, acknowledge it and return:
 <preferences>{"new_dislikes":["ingredient1","ingredient2"]}</preferences>
 
 Only include the <preferences> block if the user is genuinely expressing a dislike to remember. Do not include it for one-off meal swaps or general questions.`
@@ -103,8 +107,42 @@ Only include the <preferences> block if the user is genuinely expressing a disli
     savedDislikes = newDislikes
   }
 
-  // Strip the <preferences> block from the reply
-  const reply = raw.replace(/<preferences>[\s\S]*?<\/preferences>/, '').trim()
+  // Detect swap action
+  const swapMatch = raw.match(/<swap>([\s\S]*?)<\/swap>/)
+  let swapAction: { day: string; recipe: typeof savedRecipes[0] | null; recipeName: string } | null = null
 
-  return NextResponse.json({ reply, savedDislikes })
+  if (swapMatch) {
+    try {
+      const { day, recipeName } = JSON.parse(swapMatch[1])
+      const recipe = savedRecipes.find(r => r.title.toLowerCase() === recipeName.toLowerCase())
+        || savedRecipes.find(r => r.title.toLowerCase().includes(recipeName.toLowerCase().slice(0, 15)))
+      swapAction = { day, recipeName, recipe: recipe || null }
+
+      // Update DB if we have the recipe
+      if (recipe && plan?.weekStart) {
+        const planResult = await db.execute({
+          sql: 'SELECT meals FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
+          args: [userId, plan.weekStart],
+        })
+        if (planResult.rows.length > 0) {
+          const days = JSON.parse((planResult.rows[0].meals as string) || '[]')
+          const updated = days.map((d: { day: string }) =>
+            d.day === day ? { ...d, dinner: recipe } : d
+          )
+          await db.execute({
+            sql: 'UPDATE meal_plans SET meals = ? WHERE user_id = ? AND week_start_date = ?',
+            args: [JSON.stringify(updated), userId, plan.weekStart],
+          })
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Strip action blocks from reply
+  const reply = raw
+    .replace(/<preferences>[\s\S]*?<\/preferences>/, '')
+    .replace(/<swap>[\s\S]*?<\/swap>/, '')
+    .trim()
+
+  return NextResponse.json({ reply, savedDislikes, swapAction })
 }

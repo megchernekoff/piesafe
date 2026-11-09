@@ -31,8 +31,10 @@ export async function POST(req: NextRequest) {
   }))
 
   const savedRecipesBlock = savedRecipes.length > 0
-    ? `\nThe user's saved Recipe Box (you have full access to these):\n${savedRecipes.map(r =>
-        `- ${r.title}${r.description ? `: ${r.description}` : ''}${r.ingredients.length ? ` | Ingredients: ${r.ingredients.slice(0,5).join(', ')}${r.ingredients.length > 5 ? '...' : ''}` : ''}`
+    ? `\nThe user's saved Recipe Box:\n${savedRecipes.map(r =>
+        r.ingredients.length > 0
+          ? `- ${r.title} [FULL RECIPE: ${r.ingredients.length} ingredients, ${r.instructions.length} steps]`
+          : `- ${r.title} [LINK ONLY — no ingredients saved]`
       ).join('\n')}`
     : ''
 
@@ -45,11 +47,11 @@ ${plan.rationale ? `\nWhy this plan was chosen: ${plan.rationale}` : ''}
 
 When asked about a saved recipe, answer from the details above. Be warm and practical. The "Regenerate entire plan" button rebuilds the whole week — only suggest it for major overhauls.
 
-IMPORTANT — SWAPPING A DAY: If the user wants to put a specific saved recipe on a specific day (e.g. "put Baked Chicken Parmesan on Day 3", "use TJ's Salmon for Day 1"), you MUST:
-1. Confirm it in your reply ("Done! I've put Baked Chicken Parmesan on Day 3.")
-2. Return this block at the very end:
-<swap>{"day":"Day 3","recipeName":"Baked Chicken Parmesan"}</swap>
-Use the exact day name (Day 1, Day 2, etc.) and exact recipe title from the Recipe Box.
+IMPORTANT — SWAPPING A DAY WITH A SAVED RECIPE:
+If the user wants to put a specific saved recipe on a specific day:
+- If the recipe is marked [FULL RECIPE]: confirm and return <swap>{"day":"Day X","recipeName":"exact title"}</swap>
+- If the recipe is marked [LINK ONLY]: tell the user "That recipe is saved as a link only — I don't have the ingredients yet. You can either use the photo import to add the full recipe, or I can suggest a similar dish instead." Do NOT make up ingredients. Do NOT return a <swap> block.
+- Never invent or generate recipe content for a saved recipe — only use what's in the box.
 
 IMPORTANT — FOOD DISLIKES: If the user expresses a food dislike, acknowledge it and return:
 <preferences>{"new_dislikes":["ingredient1","ingredient2"]}</preferences>

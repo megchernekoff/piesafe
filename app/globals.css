@@ -422,3 +422,113 @@ h1, h2, h3, .serif {
 }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Mobile responsive ── */
+
+@media (max-width: 768px) {
+
+  /* Hide desktop sidebar */
+  .sidebar {
+    display: none;
+  }
+
+  /* Full width main content */
+  .main-content {
+    margin-left: 0;
+    max-width: 100vw;
+    padding: 1.25rem 1rem 5rem; /* bottom padding for tab bar */
+  }
+
+  /* Smaller page titles */
+  .page-title {
+    font-size: 2rem;
+  }
+
+  /* Full width cards */
+  .card {
+    border-radius: 10px;
+  }
+
+  /* Meal plan grid — horizontal scroll */
+  .plan-grid {
+    grid-template-columns: repeat(7, 160px);
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Recipe grid — single column */
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Panel — full screen on mobile */
+  .panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Toast sits above tab bar */
+  .toast {
+    bottom: 5rem;
+    left: 1rem;
+    right: 1rem;
+    text-align: center;
+  }
+
+  /* Buttons full width in forms */
+  .btn-primary, .btn-secondary {
+    min-height: 44px; /* Apple HIG minimum tap target */
+  }
+}
+
+/* ── Bottom tab bar (mobile only) ── */
+
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--lavender);
+    border-top: 1px solid var(--lavender-dark);
+    z-index: 50;
+    padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.4rem 0;
+    color: rgba(253, 246, 232, 0.55);
+    font-size: 0.6rem;
+    font-family: 'Lora', Georgia, serif;
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--parchment);
+  }
+
+  .bottom-nav-item.active svg {
+    color: var(--ochre);
+  }
+
+  .bottom-nav-item svg {
+    width: 22px;
+    height: 22px;
+  }
+}

@@ -41,7 +41,18 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; preview: string } | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  function handleImageFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string
+      setPendingImage({ base64: dataUrl.split(',')[1], mimeType: file.type, preview: dataUrl })
+    }
+    reader.readAsDataURL(file)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -49,15 +60,18 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
 
   async function send() {
     const text = input.trim()
-    if (!text || thinking) return
+    if ((!text && !pendingImage) || thinking) return
+    const image = pendingImage
     setInput('')
+    setPendingImage(null)
+    const displayText = text || '📷 [Recipe screenshot]'
     const history = messages.map(m => ({ role: m.role, content: m.content }))
-    setMessages(prev => [...prev, { role: 'user', content: text }])
+    setMessages(prev => [...prev, { role: 'user', content: displayText }])
     setThinking(true)
     const res = await fetch('/api/recipe-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipe: dinner, message: text, history }),
+      body: JSON.stringify({ recipe: dinner, message: text || 'I\'ve uploaded a recipe screenshot. Please extract the full recipe details so they can replace this day\'s plan.', history, image }),
     })
     const data = await res.json()
     setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
@@ -137,15 +151,30 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
           </button>
         </div>
       )}
+      {pendingImage && (
+        <div style={{ marginBottom: '0.5rem', position: 'relative', display: 'inline-block' }}>
+          <img src={pendingImage.preview} alt="recipe" style={{ height: 72, borderRadius: 6, border: '1px solid var(--stone-dark)' }} />
+          <button onClick={() => setPendingImage(null)} className="btn-ghost"
+            style={{ position: 'absolute', top: -6, right: -6, background: 'var(--lavender)', color: 'white', borderRadius: '50%', padding: '0.15rem', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={10} />
+          </button>
+        </div>
+      )}
+      <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = '' }} />
       <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="btn-ghost" onClick={() => imageInputRef.current?.click()}
+          title="Upload recipe screenshot" style={{ padding: '0.65rem 0.75rem', flexShrink: 0 }}>
+          <Camera size={15} />
+        </button>
         <input className="input"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Substitutions, technique, variations…"
+          placeholder="Substitutions, technique, or drop a screenshot…"
           style={{ flex: 1, fontSize: '0.85rem' }}
         />
-        <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
+        <button className="btn-primary" onClick={send} disabled={thinking || (!input.trim() && !pendingImage)}
           style={{ padding: '0.65rem 0.85rem' }}>
           <Send size={14} />
         </button>

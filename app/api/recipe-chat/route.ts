@@ -8,11 +8,13 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { recipe, message, history } = await req.json()
+  const { recipe, message, history, image } = await req.json()
+
+  const hasIngredients = recipe.ingredients?.length > 0
 
   const system = `You are a knowledgeable, friendly cooking assistant helping someone with a specific recipe.
 
-Here is the recipe they are looking at:
+${hasIngredients ? `Here is the recipe they are looking at:
 
 **${recipe.title}**
 ${recipe.description ? `${recipe.description}\n` : ''}
@@ -24,13 +26,20 @@ Ingredients:
 ${recipe.ingredients.map((i: string) => `- ${i}`).join('\n')}
 
 Instructions:
-${recipe.instructions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}
+${recipe.instructions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}` : `The recipe "${recipe.title}" is saved as a link only — no ingredients are stored yet.`}
 
-Answer questions about this recipe specifically. Be practical, conversational, and concise. If asked about substitutions, explain how they'll affect the dish. If asked about technique, be clear and encouraging.`
+If a screenshot is uploaded, extract the full recipe details from it and present them clearly. Answer questions about this recipe specifically. Be practical, conversational, and concise.`
+
+  const userContent = image
+    ? [
+        { type: 'image' as const, source: { type: 'base64' as const, media_type: image.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: image.base64 } },
+        { type: 'text' as const, text: message },
+      ]
+    : message
 
   const messages = [
     ...(history || []),
-    { role: 'user' as const, content: message },
+    { role: 'user' as const, content: userContent },
   ]
 
   const response = await anthropic.messages.create({

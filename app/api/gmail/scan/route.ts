@@ -288,7 +288,7 @@ export async function POST(req: NextRequest) {
       // Fall back to Claude parsing the email text
       const claudeRes = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 512,
+        max_tokens: 2048,
         messages: [{
           role: 'user',
           content: `This is a recipe newsletter email. Extract a list of the recipes or dishes mentioned.

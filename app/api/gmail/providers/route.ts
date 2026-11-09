@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   await db.execute({
     sql: `INSERT INTO gmail_providers (user_id, domain, name)
           VALUES (?, ?, ?)
-          ON CONFLICT (user_id, domain) DO NOTHING`,
+          ON CONFLICT (user_id, name) DO NOTHING`,
     args: [userId, domain, name],
   })
 

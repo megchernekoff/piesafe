@@ -77,7 +77,7 @@ export async function initializeSchema() {
       domain     TEXT NOT NULL,
       name       TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(user_id, domain)
+      UNIQUE(user_id, name)
     )
   `)
   await db.execute(`

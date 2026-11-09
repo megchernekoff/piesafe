@@ -16,47 +16,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 })
 
-async function getSessionToken() {
-  const cookies = await chrome.cookies.getAll({ url: PIE_SAFE_URL })
-  // Clerk stores the session JWT in __session or __clerk_db_jwt
-  const session = cookies.find(c => c.name === '__session' || c.name.startsWith('__clerk'))
-  return session?.value ?? null
-}
-
-async function parseRecipe(html, url) {
-  const token = await getSessionToken()
-  if (!token) return { error: 'not_logged_in' }
-
+async function callApi(body) {
   const res = await fetch(`${PIE_SAFE_URL}/api/extension/import`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-pie-safe-session': token,
-    },
-    body: JSON.stringify({ html, url, preview: true }),
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // sends pie-safe.com cookies automatically
+    body: JSON.stringify(body),
   })
 
+  if (res.status === 401) return { error: 'not_logged_in' }
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Server error ${res.status}: ${text.slice(0, 100)}`)
   }
-
   return res.json()
 }
 
+async function parseRecipe(html, url) {
+  return callApi({ html, url, preview: true })
+}
+
 async function saveRecipe(recipe, url) {
-  const token = await getSessionToken()
-  if (!token) return { error: 'not_logged_in' }
-
-  const res = await fetch(`${PIE_SAFE_URL}/api/extension/import`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-pie-safe-session': token,
-    },
-    body: JSON.stringify({ html: recipe._html, url, preview: false, recipe }),
-  })
-
-  if (!res.ok) throw new Error(`Server error ${res.status}`)
-  return res.json()
+  return callApi({ html: recipe._html, url, preview: false, recipe })
 }

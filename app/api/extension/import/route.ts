@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 import Anthropic from '@anthropic-ai/sdk'
-import { verifyToken } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
+
+function corsHeaders(req: NextRequest) {
+  const origin = req.headers.get('origin') || ''
+  const allowed = origin.startsWith('chrome-extension://') || origin === 'https://pie-safe.com'
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : 'https://pie-safe.com',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) })
+}
 
 function extractJsonLd(html: string) {
   const $ = cheerio.load(html)
@@ -47,18 +62,11 @@ function extractJSON(text: string): string {
   return text
 }
 
-async function getUserId(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get('x-pie-safe-session')
-  if (!token) return null
-  try {
-    const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY! })
-    return payload.sub ?? null
-  } catch { return null }
-}
-
 export async function POST(req: NextRequest) {
-  const userId = await getUserId(req)
-  if (!userId) return NextResponse.json({ error: 'not_logged_in' }, { status: 401 })
+  const { userId } = await auth()
+  if (!userId) {
+    return NextResponse.json({ error: 'not_logged_in' }, { status: 401, headers: corsHeaders(req) })
+  }
 
   const { html, url, preview, recipe: savedRecipe } = await req.json()
 
@@ -69,22 +77,17 @@ export async function POST(req: NextRequest) {
       sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags, prep_time, cook_time, servings)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
-        userId,
-        savedRecipe.title,
-        savedRecipe.description ?? '',
-        url,
+        userId, savedRecipe.title, savedRecipe.description ?? '', url,
         JSON.stringify(hasFullRecipe ? savedRecipe.ingredients : []),
         JSON.stringify(hasFullRecipe ? savedRecipe.instructions : []),
         JSON.stringify(savedRecipe.tags ?? []),
-        savedRecipe.prep_time ?? null,
-        savedRecipe.cook_time ?? null,
-        savedRecipe.servings ?? null,
+        savedRecipe.prep_time ?? null, savedRecipe.cook_time ?? null, savedRecipe.servings ?? null,
       ],
     })
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true }, { headers: corsHeaders(req) })
   }
 
-  if (!html) return NextResponse.json({ error: 'No HTML provided' }, { status: 400 })
+  if (!html) return NextResponse.json({ error: 'No HTML provided' }, { status: 400, headers: corsHeaders(req) })
 
   // Try JSON-LD first
   const structured = extractJsonLd(html)
@@ -98,16 +101,12 @@ export async function POST(req: NextRequest) {
     const title = String(structured.name || '').trim()
     if (title && ingredients.length >= 2) {
       return NextResponse.json({
-        title,
-        description: String(structured.description || '').trim(),
-        ingredients,
-        instructions,
+        title, description: String(structured.description || '').trim(),
+        ingredients, instructions,
         tags: toArr(structured.keywords).flatMap((k: string) => k.split(',')).map((k: string) => k.trim()).filter(Boolean),
-        prep_time: toMin(structured.prepTime),
-        cook_time: toMin(structured.cookTime),
-        servings: parseInt(String(structured.recipeYield || '0')) || null,
-        _html: html,
-      })
+        prep_time: toMin(structured.prepTime), cook_time: toMin(structured.cookTime),
+        servings: parseInt(String(structured.recipeYield || '0')) || null, _html: html,
+      }, { headers: corsHeaders(req) })
     }
   }
 
@@ -117,10 +116,12 @@ export async function POST(req: NextRequest) {
   const text = ($('main').text() || $('article').text() || $('body').text())
     .replace(/\s+/g, ' ').trim().slice(0, 6000)
 
-  // No readable content — save as title+URL bookmark
   if (text.length < 100) {
     const ogTitle = $('meta[property="og:title"]').attr('content') || $('title').text().replace(/\s*[-|].*$/, '').trim()
-    return NextResponse.json({ title: ogTitle || 'Saved recipe', description: '', ingredients: [], instructions: [], tags: [], _html: html })
+    return NextResponse.json(
+      { title: ogTitle || 'Saved recipe', description: '', ingredients: [], instructions: [], tags: [], _html: html },
+      { headers: corsHeaders(req) }
+    )
   }
 
   const message = await anthropic.messages.create({
@@ -130,17 +131,14 @@ export async function POST(req: NextRequest) {
       role: 'user',
       content: `Extract the recipe from this page. Return JSON:
 {"title":"...","description":"...","ingredients":["..."],"instructions":["..."],"prep_time":15,"cook_time":30,"servings":4,"tags":["..."]}
-Return only valid JSON.
-
-Page text:
-${text}`,
+Return only valid JSON.\n\n${text}`,
     }],
   })
 
   try {
     const parsed = JSON.parse(extractJSON((message.content[0] as { text: string }).text))
-    return NextResponse.json({ ...parsed, _html: html })
+    return NextResponse.json({ ...parsed, _html: html }, { headers: corsHeaders(req) })
   } catch {
-    return NextResponse.json({ error: 'Could not parse a recipe from this page.' }, { status: 422 })
+    return NextResponse.json({ error: 'Could not parse a recipe from this page.' }, { status: 422, headers: corsHeaders(req) })
   }
 }

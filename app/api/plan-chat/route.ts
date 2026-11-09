@@ -16,23 +16,34 @@ export async function POST(req: NextRequest) {
     .map((d: { day: string; dinner: { title: string } }) => `${d.day}: ${d.dinner.title}`)
     .join('\n')
 
-  // Fetch saved recipes for context
+  // Fetch saved recipes with details for context
   const recipesResult = await db.execute({
-    sql: "SELECT title FROM recipes WHERE user_id = ? AND ingredients != '[]' ORDER BY created_at DESC LIMIT 20",
+    sql: "SELECT title, description, ingredients, instructions, prep_time, cook_time FROM recipes WHERE user_id = ? ORDER BY created_at DESC LIMIT 30",
     args: [userId],
   })
-  const savedRecipes = recipesResult.rows.map(r => r.title as string)
+  const savedRecipes = recipesResult.rows.map(r => ({
+    title: r.title as string,
+    description: r.description as string,
+    ingredients: JSON.parse(r.ingredients as string || '[]') as string[],
+    instructions: JSON.parse(r.instructions as string || '[]') as string[],
+    prep_time: r.prep_time as number | null,
+    cook_time: r.cook_time as number | null,
+  }))
 
-  const system = `You are a helpful meal planning assistant. The user has a generated weekly dinner plan and wants to discuss changes or ask questions about it.
+  const savedRecipesBlock = savedRecipes.length > 0
+    ? `\nThe user's saved Recipe Box (you have full access to these):\n${savedRecipes.map(r =>
+        `- ${r.title}${r.description ? `: ${r.description}` : ''}${r.ingredients.length ? ` | Ingredients: ${r.ingredients.slice(0,5).join(', ')}${r.ingredients.length > 5 ? '...' : ''}` : ''}`
+      ).join('\n')}`
+    : ''
+
+  const system = `You are a meal planning assistant helping a user refine their weekly dinner plan. You have full access to their data — treat it as your own working context, not as something you're "looking at from outside."
 
 Current plan:
 ${mealSummary}
+${savedRecipesBlock}
+${plan.rationale ? `\nWhy this plan was chosen: ${plan.rationale}` : ''}
 
-${savedRecipes.length > 0 ? `Recipes in their Recipe Box (can suggest using these): ${savedRecipes.join(', ')}` : ''}
-
-${plan.rationale ? `Why this plan was chosen: ${plan.rationale}` : ''}
-
-Help the user refine the plan. If they want to swap one day, suggest a specific replacement. Be conversational and concise. Note: "Regenerate entire plan" button will rebuild the whole week — suggest it only for major overhauls.
+When asked about a saved recipe, answer from the details above. If the user wants to swap one day, suggest a specific replacement. Be warm and practical. The "Regenerate entire plan" button rebuilds the whole week — only suggest it for major overhauls, not single-day swaps.
 
 IMPORTANT: If the user expresses a food dislike or aversion (e.g. "I don't like polenta", "no more mushrooms", "I hate cilantro", "avoid shellfish"), you must:
 1. Acknowledge it warmly in your reply

@@ -28,7 +28,7 @@ ${recipe.ingredients.map((i: string) => `- ${i}`).join('\n')}
 Instructions:
 ${recipe.instructions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}` : `The recipe "${recipe.title}" is saved as a link only — no ingredients are stored yet.`}
 
-If a screenshot is uploaded, extract the full recipe details from it and present them clearly. Answer questions about this recipe specifically. Be practical, conversational, and concise.`
+If a screenshot is uploaded, extract the full recipe details from it and present them clearly. When extracting a recipe from an image, ALWAYS include the full recipe as a JSON object at the end wrapped in <recipe>{"title":"...","description":"...","ingredients":[...],"instructions":[...],"prep_time":15,"cook_time":30,"servings":4,"tags":[]}</recipe> tags so it can be applied automatically. Answer questions about this recipe specifically. Be practical, conversational, and concise.`
 
   const userContent = image
     ? [

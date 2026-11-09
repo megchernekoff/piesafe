@@ -71,10 +71,30 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
     const res = await fetch('/api/recipe-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipe: dinner, message: text || 'I\'ve uploaded a recipe screenshot. Please extract the full recipe details so they can replace this day\'s plan.', history, image }),
+      body: JSON.stringify({ recipe: dinner, message: text || 'I\'ve uploaded a recipe screenshot. Extract the full recipe and also return it as a JSON object wrapped in <recipe>{...}</recipe> tags so it can be applied directly.', history, image }),
     })
     const data = await res.json()
     setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
+
+    // Auto-extract recipe from response if image was sent
+    if (image && data.reply) {
+      const recipeMatch = data.reply.match(/<recipe>([\s\S]*?)<\/recipe>/)
+      if (recipeMatch) {
+        try {
+          const extracted = JSON.parse(recipeMatch[0].replace(/<\/?recipe>/g, ''))
+          if (extracted.ingredients?.length > 0) onApplyTweak({ ...dinner, ...extracted })
+        } catch { /* ignore */ }
+      } else {
+        // Try to extract JSON directly
+        const jsonMatch = data.reply.match(/\{[\s\S]*"ingredients"[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            const extracted = JSON.parse(jsonMatch[0])
+            if (extracted.ingredients?.length > 0) onApplyTweak({ ...dinner, ...extracted })
+          } catch { /* ignore */ }
+        }
+      }
+    }
     setThinking(false)
   }
 

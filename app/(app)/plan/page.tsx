@@ -78,21 +78,26 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
 
     // Auto-extract recipe from response if image was sent
     if (image && data.reply) {
+      let extracted: Record<string, unknown> | null = null
       const recipeMatch = data.reply.match(/<recipe>([\s\S]*?)<\/recipe>/)
       if (recipeMatch) {
-        try {
-          const extracted = JSON.parse(recipeMatch[0].replace(/<\/?recipe>/g, ''))
-          if (extracted.ingredients?.length > 0) onApplyTweak({ ...dinner, ...extracted })
-        } catch { /* ignore */ }
-      } else {
-        // Try to extract JSON directly
+        try { extracted = JSON.parse(recipeMatch[0].replace(/<\/?recipe>/g, '')) } catch { /* ignore */ }
+      }
+      if (!extracted) {
         const jsonMatch = data.reply.match(/\{[\s\S]*"ingredients"[\s\S]*\}/)
-        if (jsonMatch) {
-          try {
-            const extracted = JSON.parse(jsonMatch[0])
-            if (extracted.ingredients?.length > 0) onApplyTweak({ ...dinner, ...extracted })
-          } catch { /* ignore */ }
-        }
+        if (jsonMatch) { try { extracted = JSON.parse(jsonMatch[0]) } catch { /* ignore */ } }
+      }
+      if (extracted && (extracted.ingredients as string[])?.length > 0) {
+        const updated = { ...dinner, ...extracted } as Dinner
+        onApplyTweak(updated)
+        // Also enrich the matching recipe in the Recipe Box
+        fetch('/api/recipes', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ titleMatch: dinner.title, ...extracted }),
+        }).then(r => r.json()).then(res => {
+          if (res.updated) console.log('Recipe Box enriched for:', dinner.title)
+        }).catch(() => {})
       }
     }
     setThinking(false)

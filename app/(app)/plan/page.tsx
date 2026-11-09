@@ -36,7 +36,7 @@ function getMonday(d = new Date()): string {
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
 
-function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (updated: Dinner) => void }) {
+function DinnerChat({ dinner, dayName, weekStart, onApplyTweak }: { dinner: Dinner; dayName: string; weekStart: string; onApplyTweak: (updated: Dinner) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
@@ -90,6 +90,12 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
       if (extracted && (extracted.ingredients as string[])?.length > 0) {
         const updated = { ...dinner, ...extracted } as Dinner
         onApplyTweak(updated)
+        // Persist to meal plan DB so it survives refresh
+        fetch('/api/meal-plan/swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weekStart, dayName, prebuiltDinner: updated }),
+        }).catch(() => {})
         // Also enrich the matching recipe in the Recipe Box
         fetch('/api/recipes', {
           method: 'PATCH',
@@ -209,6 +215,7 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
 }
 
 function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; weekStart: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
+
   const [currentDinner, setCurrentDinner] = useState(day.dinner!)
   // Sync if parent updates the dinner (e.g. from plan chat swap)
   useEffect(() => { if (day.dinner) setCurrentDinner(day.dinner) }, [day.dinner])
@@ -341,7 +348,7 @@ function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; w
           </div>
         )}
 
-        <DinnerChat dinner={d} onApplyTweak={(updated) => { setCurrentDinner(updated); onDinnerUpdate(updated) }} />
+        <DinnerChat dinner={d} dayName={day.day} weekStart={weekStart} onApplyTweak={(updated) => { setCurrentDinner(updated); onDinnerUpdate(updated) }} />
       </div>
     </div>
   )

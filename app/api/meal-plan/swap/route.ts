@@ -17,7 +17,26 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { weekStart, dayName, reason } = await req.json()
+  const { weekStart, dayName, reason, prebuiltDinner } = await req.json()
+
+  // If a pre-built dinner is provided, skip generation and just save it
+  if (prebuiltDinner) {
+    const planResult = await db.execute({
+      sql: 'SELECT meals FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
+      args: [userId, weekStart],
+    })
+    if (planResult.rows.length > 0) {
+      const days = JSON.parse((planResult.rows[0].meals as string) || '[]')
+      const updated = days.map((d: { day: string }) =>
+        d.day === dayName ? { ...d, dinner: prebuiltDinner } : d
+      )
+      await db.execute({
+        sql: 'UPDATE meal_plans SET meals = ? WHERE user_id = ? AND week_start_date = ?',
+        args: [JSON.stringify(updated), userId, weekStart],
+      })
+    }
+    return NextResponse.json({ dinner: prebuiltDinner })
+  }
 
   const profileResult = await db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] })
   const profile = profileResult.rows[0] ?? null

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Pie Safe",
+  "description": "Save any recipe to your Pie Safe recipe box in one click.",
+  "version": "1.0.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "cookies",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://pie-safe.com/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}

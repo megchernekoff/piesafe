@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import ExtensionBanner from '@/components/ExtensionBanner'
 import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink, Send } from 'lucide-react'
 
 interface Recipe {
@@ -362,6 +363,8 @@ export default function RecipesPage() {
           onRefresh={(updated) => { setSelected(updated); setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r)) }}
         />
       )}
+
+      <ExtensionBanner />
 
       <div className="page-header">
         <h1 className="page-title">Recipe Box</h1>

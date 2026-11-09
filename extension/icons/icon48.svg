@@ -1,0 +1,16 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'>
+  <!-- Background circle -->
+  <circle cx='24' cy='24' r='23.04' fill='#6b5c8a'/>
+  <!-- Pie dish shadow -->
+  <ellipse cx='24' cy='32.400000000000006' rx='18.240000000000002' ry='5.76' fill='#c8911a' opacity='0.4'/>
+  <!-- Pie side -->
+  <path d='M8.64 24.96 Q8.64 21.12 24 21.12 Q39.36 21.12 39.36 24.96 L39.36 29.759999999999998 Q39.36 32.64 24 32.64 Q8.64 32.64 8.64 29.759999999999998 Z' fill='#a87514'/>
+  <!-- Pie top crust -->
+  <ellipse cx='24' cy='22.080000000000002' rx='15.36' ry='5.28' fill='#e8c06a'/>
+  <!-- Crust edge -->
+  <ellipse cx='24' cy='22.080000000000002' rx='15.36' ry='5.28' fill='none' stroke='#c8911a' stroke-width='1.2000000000000002'/>
+  <!-- Steam wisps -->
+  <path d='M18.240000000000002 14.399999999999999 Q16.799999999999997 10.56 18.240000000000002 6.720000000000001' stroke='#fdf6e8' stroke-width='1.92' stroke-linecap='round' fill='none' opacity='0.6'/>
+  <path d='M24 13.440000000000001 Q22.56 9.600000000000001 24 5.76' stroke='#fdf6e8' stroke-width='1.92' stroke-linecap='round' fill='none' opacity='0.6'/>
+  <path d='M29.759999999999998 14.399999999999999 Q28.32 10.56 29.759999999999998 6.720000000000001' stroke='#fdf6e8' stroke-width='1.92' stroke-linecap='round' fill='none' opacity='0.6'/>
+</svg>

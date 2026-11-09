@@ -6,6 +6,7 @@ import { BookOpen, Calendar, ShoppingCart, Mail } from 'lucide-react'
 import { db } from '@/lib/db'
 import LavenderSprig from '@/components/icons/LavenderSprig'
 import PieIcon from '@/components/icons/PieIcon'
+import ExtensionBanner from '@/components/ExtensionBanner'
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -42,6 +43,8 @@ export default async function DashboardPage() {
         <h1 className="page-title">Hi, {name}</h1>
         <p className="page-subtitle">What are you cooking this week?</p>
       </div>
+
+      <ExtensionBanner />
 
       {unreadDigests > 0 && (
         <Link href="/digest" style={{ textDecoration: 'none', display: 'block', maxWidth: '700px', marginBottom: '1.5rem' }}>

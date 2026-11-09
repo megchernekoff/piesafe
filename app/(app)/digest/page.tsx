@@ -20,7 +20,7 @@ interface Digest {
 const SUPPORTED_PROVIDERS: Provider[] = [
   { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', senderName: 'NYT Cooking', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
   { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',     keywords: ['serious eats'] },
-  { name: 'Bon Appétit',        domain: 'bonappetit.com',        from: 'newsletter@bonappetit.com',       keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
+  { name: 'Bon Appétit',        domain: 'newsletter.bonappetit.com', from: 'email@newsletter.bonappetit.com', keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                keywords: ['food52'] },
   { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com', keywords: ['half baked harvest'] },
   { name: 'Smitten Kitchen',    domain: 'substack.com',          from: 'smittenkitchen@substack.com',     keywords: ['smitten kitchen', 'smittenkitchen'] },

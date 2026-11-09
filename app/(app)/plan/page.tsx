@@ -242,19 +242,27 @@ function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; w
           </div>
         )}
 
-        <div>
-          <div className="section-label">Ingredients</div>
-          <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-            {d.ingredients?.map((ing, i) => <li key={i}>{ing}</li>)}
-          </ul>
-        </div>
-
-        <div>
-          <div className="section-label">Instructions</div>
-          <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
-            {d.instructions?.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
-          </ol>
-        </div>
+        {(!d.ingredients || d.ingredients.length === 0) ? (
+          <div style={{ background: 'var(--lavender-soft)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.85rem', color: 'var(--lavender)', lineHeight: 1.6 }}>
+            This recipe was saved as a link only — no ingredients are stored yet.
+            Upload a screenshot below to add the full recipe, or use <strong>↺ Suggest something different</strong> to generate a similar one.
+          </div>
+        ) : (
+          <>
+            <div>
+              <div className="section-label">Ingredients</div>
+              <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+                {d.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+              </ul>
+            </div>
+            <div>
+              <div className="section-label">Instructions</div>
+              <ol style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
+                {d.instructions?.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
+              </ol>
+            </div>
+          </>
+        )}
 
         <hr className="divider" />
 

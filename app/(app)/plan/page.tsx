@@ -344,7 +344,9 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
   const SUGGESTIONS = ['Make it lighter this week', 'Swap in something vegetarian', 'I want more variety']
 
   return (
-    <div className="card" style={{ marginTop: '2rem' }}>
+    <div className="card" style={{ marginTop: '2rem' }}
+      onDragOver={e => e.preventDefault()}
+      onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) handleImageFile(f) }}>
       <div className="section-label" style={{ marginBottom: '0.75rem' }}>Tweak this plan</div>
       <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '1rem' }}>
         Ask for changes — swap a meal, adjust the vibe, work around what you have. When you're happy, regenerate.

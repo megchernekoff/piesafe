@@ -87,7 +87,7 @@ export default function DigestPage() {
         const providers = Array.isArray(providerData) ? providerData : []
         setSavedProviders(providers)
         const tokens: Record<string, string> = {}
-        providers.forEach((p: SavedProvider) => { if (p.nextPageToken) tokens[p.domain] = p.nextPageToken })
+        providers.forEach((p: SavedProvider) => { if (p.nextPageToken) tokens[p.name] = p.nextPageToken })
         setNextPageTokens(tokens)
       }
     }).catch(() => setConnected(null))
@@ -125,7 +125,7 @@ export default function DigestPage() {
 
   async function scanProvider(domain: string, name: string, pageToken = '', isLoadMore = false) {
     // Fresh scan resets the token
-    if (!isLoadMore) setNextPageTokens(prev => ({ ...prev, [domain]: '' }))
+    if (!isLoadMore) setNextPageTokens(prev => ({ ...prev, [name]: '' }))
     setScanning(domain)
     const res = await fetch('/api/gmail/scan', {
       method: 'POST',
@@ -142,7 +142,7 @@ export default function DigestPage() {
         const fresh = newDigests.filter(d => !existingIds.includes(d.gmail_id))
         return pageToken ? [...prev, ...fresh] : [...fresh, ...prev]
       })
-      setNextPageTokens(prev => ({ ...prev, [domain]: data.nextPageToken ?? '' }))
+      setNextPageTokens(prev => ({ ...prev, [name]: data.nextPageToken ?? '' }))
       if (newDigests.length === 0 && !pageToken) setToast(`No recent ${name} emails found.`)
       else if (newDigests.length > 0) setToast(`Found ${newDigests.length} ${name} digest${newDigests.length > 1 ? 's' : ''}!`)
     }
@@ -430,7 +430,7 @@ export default function DigestPage() {
                 if (!token) return null
                 return (
                   <button key={p.domain} className="btn-secondary"
-                    onClick={() => scanProvider(p.domain, p.name, token, true)}
+                    onClick={() => scanProvider(p.domain, p.name, nextPageTokens[p.name] || '', true)}
                     disabled={scanning === p.domain}
                     style={{ alignSelf: 'flex-start', fontSize: '0.82rem', marginTop: '0.5rem' }}>
                     {scanning === p.domain

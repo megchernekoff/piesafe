@@ -330,10 +330,10 @@ ${cleanText}`,
     digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0, _debug: debugInfo })
   }
 
-  // Persist the nextPageToken so Load more works after page refresh
+  // Persist the nextPageToken keyed by name so multiple providers on same domain don't share it
   await db.execute({
-    sql: 'UPDATE gmail_providers SET next_page_token = ? WHERE user_id = ? AND domain = ?',
-    args: [nextPageToken || null, userId, domain],
+    sql: 'UPDATE gmail_providers SET next_page_token = ? WHERE user_id = ? AND name = ?',
+    args: [nextPageToken || null, userId, providerName],
   })
 
   return NextResponse.json({ digests, nextPageToken })

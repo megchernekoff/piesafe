@@ -36,10 +36,11 @@ function getMonday(d = new Date()): string {
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
 
-function DinnerChat({ dinner }: { dinner: Dinner }) {
+function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (updated: Dinner) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [applying, setApplying] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,6 +62,30 @@ function DinnerChat({ dinner }: { dinner: Dinner }) {
     const data = await res.json()
     setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' }])
     setThinking(false)
+  }
+
+  async function applyTweak() {
+    const lastReply = [...messages].reverse().find(m => m.role === 'assistant')
+    if (!lastReply) return
+    setApplying(true)
+    const res = await fetch('/api/recipe-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipe: dinner,
+        message: `Based on our conversation, give me the complete updated recipe incorporating the changes we discussed. Return ONLY a JSON object with the same structure as the original recipe (title, description, ingredients, instructions, prep_time, cook_time, servings, tags, toddler_notes). No other text.`,
+        history: messages.map(m => ({ role: m.role, content: m.content })),
+      }),
+    })
+    const data = await res.json()
+    try {
+      const match = data.reply?.match(/\{[\s\S]*\}/)
+      if (match) {
+        const updated = JSON.parse(match[0])
+        onApplyTweak({ ...dinner, ...updated })
+      }
+    } catch { /* keep original */ }
+    setApplying(false)
   }
 
   const SUGGESTIONS = ['Any substitutions?', 'How do I know when it\'s done?', 'Can I make this ahead?']
@@ -104,6 +129,14 @@ function DinnerChat({ dinner }: { dinner: Dinner }) {
           <div ref={bottomRef} />
         </div>
       )}
+      {messages.some(m => m.role === 'assistant') && (
+        <div style={{ marginBottom: '0.5rem' }}>
+          <button className="btn-secondary" onClick={applyTweak} disabled={applying || thinking}
+            style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}>
+            {applying ? <><Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> Applying…</> : '✦ Apply changes to recipe'}
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <input className="input"
           value={input}
@@ -121,7 +154,7 @@ function DinnerChat({ dinner }: { dinner: Dinner }) {
   )
 }
 
-function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
+function DayPanel({ day, onClose, onDinnerUpdate }: { day: DayPlan; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
   const d = day.dinner!
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -201,7 +234,7 @@ function DayPanel({ day, onClose }: { day: DayPlan; onClose: () => void }) {
         </div>
 
         <hr className="divider" />
-        <DinnerChat dinner={d} />
+        <DinnerChat dinner={d} onApplyTweak={onDinnerUpdate} />
       </div>
     </div>
   )
@@ -420,8 +453,14 @@ function GroceryView({ plan, weekStart, onPlanUpdate }: { plan: Plan; weekStart:
 
 export default function PlanPage() {
   const [weekStart, setWeekStart] = useState(getMonday)
-  const [nights, setNights] = useState(7)
-  const [tweaks, setTweaks] = useState('')
+  const [nights, setNights] = useState<number>(() => {
+    if (typeof window === 'undefined') return 7
+    return parseInt(localStorage.getItem('plan-nights') || '7')
+  })
+  const [tweaks, setTweaks] = useState<string>(() => {
+    if (typeof window === 'undefined') return ''
+    return localStorage.getItem('plan-tweaks') || ''
+  })
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
   const initialTab = typeof window !== 'undefined'
@@ -430,6 +469,10 @@ export default function PlanPage() {
   const [view, setView] = useState<'plan' | 'grocery' | 'prep'>(initialTab)
   const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null)
   const [, setChecked] = useState<Set<string>>(new Set())
+
+  // Persist nights and tweaks across navigation
+  const updateNights = (n: number) => { setNights(n); localStorage.setItem('plan-nights', String(n)) }
+  const updateTweaks = (t: string) => { setTweaks(t); localStorage.setItem('plan-tweaks', t) }
 
   useEffect(() => {
     fetch(`/api/meal-plan?weekStart=${weekStart}`)
@@ -471,7 +514,14 @@ export default function PlanPage() {
   return (
     <div>
       {selectedDay && (
-        <DayPanel day={selectedDay} onClose={() => setSelectedDay(null)} />
+        <DayPanel day={selectedDay} onClose={() => setSelectedDay(null)}
+          onDinnerUpdate={(updated) => {
+            setSelectedDay(prev => prev ? { ...prev, dinner: updated } : prev)
+            setPlan(prev => prev ? {
+              ...prev,
+              days: prev.days.map(d => d.day === selectedDay.day ? { ...d, dinner: updated } : d)
+            } : prev)
+          }} />
       )}
 
       <div className="page-header">
@@ -491,7 +541,7 @@ export default function PlanPage() {
           <div style={{ display: 'flex', gap: '0.35rem' }}>
             {[1,2,3,4,5,6,7].map(n => (
               <button key={n} type="button"
-                onClick={() => setNights(n)}
+                onClick={() => updateNights(n)}
                 className={nights === n ? 'btn-primary' : 'btn-secondary'}
                 style={{ minWidth: '36px', padding: '0.45rem 0.5rem', fontSize: '0.875rem' }}>
                 {n}
@@ -504,7 +554,7 @@ export default function PlanPage() {
           <input className="input"
             placeholder="e.g. one Thai night, nothing too heavy, use up the feta…"
             value={tweaks}
-            onChange={e => setTweaks(e.target.value)}
+            onChange={e => updateTweaks(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && generate()}
           />
         </div>

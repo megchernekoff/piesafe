@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
   const days = Array.from({ length: nights }, (_, i) => ({ name: `Day ${i + 1}` }))
 
   const savedRecipesBlock = savedRecipes.length > 0
-    ? `\nThe user has these saved recipes in their recipe box — try to use some of them this week:\n${savedRecipes.map(r =>
+    ? `\nThe user has these saved recipes — include at most 2 of them this week if they fit well, and fill the rest with fresh AI-generated suggestions:\n${savedRecipes.map(r =>
         `- ${r.title}${r.description ? `: ${r.description}` : ''}${r.prep_time || r.cook_time ? ` (${[r.prep_time && `${r.prep_time}m prep`, r.cook_time && `${r.cook_time}m cook`].filter(Boolean).join(', ')})` : ''}`
-      ).join('\n')}\nFor any saved recipe you use, copy its exact ingredients and instructions from above.\n`
+      ).join('\n')}\nFor any saved recipe you use, copy its exact ingredients and instructions. The majority of meals should be new creative suggestions.\n`
     : ''
 
   const prompt = `Generate a ${nights}-day dinner meal plan for a household of ${householdSize} people.

@@ -47,11 +47,15 @@ ${plan.rationale ? `\nWhy this plan was chosen: ${plan.rationale}` : ''}
 
 When asked about a saved recipe, answer from the details above. Be warm and practical. The "Regenerate entire plan" button rebuilds the whole week — only suggest it for major overhauls.
 
-IMPORTANT — SWAPPING A DAY WITH A SAVED RECIPE:
-If the user wants to put a specific saved recipe on a specific day:
-- If the recipe is marked [FULL RECIPE]: confirm and return <swap>{"day":"Day X","recipeName":"exact title"}</swap>
-- If the recipe is marked [LINK ONLY]: tell the user "That recipe is saved as a link only — I don't have the ingredients yet. You can either use the photo import to add the full recipe, or I can suggest a similar dish instead." Do NOT make up ingredients. Do NOT return a <swap> block.
-- Never invent or generate recipe content for a saved recipe — only use what's in the box.
+IMPORTANT — SWAPPING A DAY WITH A RECIPE:
+If the user uploads a photo of a recipe AND wants it on a specific day, extract the full recipe and return:
+<swap>{"day":"Day X","recipeName":"title","recipe":{"title":"...","description":"...","ingredients":["..."],"instructions":["..."],"prep_time":15,"cook_time":30,"servings":4,"tags":[]}}</swap>
+
+If the user wants to use a saved Recipe Box recipe on a specific day:
+- If marked [FULL RECIPE]: confirm and return <swap>{"day":"Day X","recipeName":"exact title"}</swap>
+- If marked [LINK ONLY]: say "That's saved as a link only — no ingredients yet. Try the photo import, or I can suggest something similar." Do NOT make up ingredients. Do NOT return <swap>.
+
+Never invent ingredients for a recipe you don't have full data for.
 
 IMPORTANT — FOOD DISLIKES: If the user expresses a food dislike, acknowledge it and return:
 <preferences>{"new_dislikes":["ingredient1","ingredient2"]}</preferences>
@@ -122,10 +126,24 @@ Only include the <preferences> block if the user is genuinely expressing a disli
 
   if (swapMatch) {
     try {
-      const { day, recipeName } = JSON.parse(swapMatch[1])
-      const recipe = savedRecipes.find(r => r.title.toLowerCase() === recipeName.toLowerCase())
-        || savedRecipes.find(r => r.title.toLowerCase().includes(recipeName.toLowerCase().slice(0, 15)))
-      swapAction = { day, recipeName, recipe: recipe || null }
+      const parsed = JSON.parse(swapMatch[1])
+      const { day, recipeName } = parsed
+      // Use embedded recipe from image extraction if present, otherwise look up saved recipe
+      const embeddedRecipe = parsed.recipe || null
+      const savedRecipe = embeddedRecipe ? null :
+        savedRecipes.find(r => r.title.toLowerCase() === recipeName?.toLowerCase())
+        || savedRecipes.find(r => r.title?.toLowerCase().includes(recipeName?.toLowerCase().slice(0, 15)))
+      const recipe = embeddedRecipe || savedRecipe || null
+      swapAction = { day, recipeName: recipeName || embeddedRecipe?.title || '', recipe }
+
+      // Auto-save photo-extracted recipes to recipe box so they persist
+      if (embeddedRecipe && embeddedRecipe.ingredients?.length > 0) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO recipes (user_id, title, description, ingredients, instructions, tags, prep_time, cook_time, servings)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [userId, embeddedRecipe.title, embeddedRecipe.description || '', JSON.stringify(embeddedRecipe.ingredients), JSON.stringify(embeddedRecipe.instructions || []), JSON.stringify(embeddedRecipe.tags || []), embeddedRecipe.prep_time || null, embeddedRecipe.cook_time || null, embeddedRecipe.servings || null],
+        })
+      }
 
       // Update DB if we have the recipe
       if (recipe && plan?.weekStart) {

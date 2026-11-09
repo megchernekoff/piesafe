@@ -156,6 +156,8 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
 
 function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; weekStart: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
   const [currentDinner, setCurrentDinner] = useState(day.dinner!)
+  // Sync if parent updates the dinner (e.g. from plan chat swap)
+  useEffect(() => { if (day.dinner) setCurrentDinner(day.dinner) }, [day.dinner])
   const d = currentDinner
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)

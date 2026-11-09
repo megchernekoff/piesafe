@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
+import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X, RefreshCw } from 'lucide-react'
 
 interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
 interface SavedProvider { name: string; domain: string; nextPageToken?: string }
@@ -58,6 +58,7 @@ export default function DigestPage() {
   const [saving, setSaving] = useState<string | null>(null)
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [scanning, setScanning] = useState<string | null>(null)
+  const [scanningAll, setScanningAll] = useState(false)
   const [nextPageTokens, setNextPageTokens] = useState<Record<string, string>>({})
   const [toast, setToast] = useState('')
   const [query, setQuery] = useState('')
@@ -156,6 +157,14 @@ export default function DigestPage() {
       body: JSON.stringify({ gmailId }),
     })
     setDigests(prev => prev.filter(d => d.gmail_id !== gmailId))
+  }
+
+  async function scanAll() {
+    setScanningAll(true)
+    for (const p of savedProviders) {
+      await scanProvider(p.domain, p.name)
+    }
+    setScanningAll(false)
   }
 
   async function disconnect() {
@@ -319,8 +328,17 @@ export default function DigestPage() {
             </div>
           )}
 
-          {/* Disconnect */}
-          <div>
+          {/* Scan all + Disconnect */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {savedProviders.length > 1 && (
+              <button className="btn-secondary" onClick={scanAll}
+                disabled={scanningAll || scanning !== null}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+                {scanningAll
+                  ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Scanning all…</>
+                  : <><RefreshCw size={13} /> Scan all</>}
+              </button>
+            )}
             <button className="btn-ghost" onClick={disconnect} style={{ color: 'var(--ink-light)', fontSize: '0.8rem' }}>
               <Unlink size={12} /> Disconnect Gmail
             </button>

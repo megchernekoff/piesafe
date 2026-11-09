@@ -192,8 +192,9 @@ export async function POST(req: NextRequest) {
   })
   const seenIds = new Set(existing.rows.map(r => r.gmail_id as string))
 
-  // Find the specific from address for this provider if we have it
-  const provider = SUPPORTED_PROVIDERS.find(p => p.domain === domain)
+  // Find provider by name first (handles multiple providers on same domain like Substack)
+  const provider = SUPPORTED_PROVIDERS.find(p => p.name === providerName)
+    || SUPPORTED_PROVIDERS.find(p => p.domain === domain)
   const fromQuery = provider?.from ? `from:${provider.from}` : `from:${domain}`
 
   const after = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)

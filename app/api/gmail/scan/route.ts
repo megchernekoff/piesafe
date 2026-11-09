@@ -237,8 +237,14 @@ export async function POST(req: NextRequest) {
     }
 
     const rawHtml = extractBody(msgData.payload ?? {})
-    const fullText = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-    // Skip the first 15% of long emails — Substack/newsletter preambles push recipes down
+    const fullText = rawHtml
+      .replace(/<[^>]*>/g, ' ')   // strip HTML tags
+      .replace(/&#\d+;/g, ' ')    // strip numeric HTML entities (&#8199; &#173; etc.)
+      .replace(/&nbsp;/g, ' ')    // strip non-breaking spaces
+      .replace(/&[a-z]+;/g, ' ')  // strip named entities (&amp; &quot; etc.)
+      .replace(/\s+/g, ' ')
+      .trim()
+    // Skip the first 15% of long emails — newsletter preambles push recipes down
     const skipChars = fullText.length > 6000 ? Math.floor(fullText.length * 0.15) : 0
     const cleanText = fullText.slice(skipChars, skipChars + 8000)
 

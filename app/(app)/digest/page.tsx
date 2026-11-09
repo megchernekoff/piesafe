@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
 
 interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
@@ -195,7 +196,13 @@ export default function DigestPage() {
 
   return (
     <div>
-      {toast && <div className="toast">{toast}</div>}
+      {toast && (
+        <Link href="/recipes" style={{ textDecoration: 'none' }}>
+          <div className="toast" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {toast} <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>→</span>
+          </div>
+        </Link>
+      )}
 
       <div className="page-header">
         <h1 className="page-title">The Digest</h1>

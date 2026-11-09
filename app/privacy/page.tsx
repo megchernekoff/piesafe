@@ -49,7 +49,7 @@ export default function PrivacyPage() {
 
       <section>
         <h2 style={{ fontSize: '1.2rem', fontWeight: 500, marginBottom: '0.75rem' }}>Contact</h2>
-        <p>Questions? Email <a href="mailto:piesafe214@gmail.com" style={{ color: '#6b5c8a' }}>piesafe214@gmail.com</a></p>
+        <p>Questions? Email <a href="mailto:pie.safe314@gmail.com" style={{ color: '#6b5c8a' }}>pie.safe314@gmail.com</a></p>
       </section>
     </div>
   )

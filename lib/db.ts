@@ -90,6 +90,7 @@ export async function initializeSchema() {
       date       TEXT NOT NULL,
       summary    TEXT NOT NULL DEFAULT '[]',
       saved      INTEGER NOT NULL DEFAULT 0,
+      dismissed  INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)

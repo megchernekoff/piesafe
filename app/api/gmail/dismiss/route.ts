@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const { gmailId } = await req.json()
 
   await db.execute({
-    sql: 'DELETE FROM email_digests WHERE gmail_id = ? AND user_id = ?',
+    sql: 'UPDATE email_digests SET dismissed = 1 WHERE gmail_id = ? AND user_id = ?',
     args: [gmailId, userId],
   })
 

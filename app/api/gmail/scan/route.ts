@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gmail token expired — please reconnect.' }, { status: 401 })
   }
 
-  // Fetch already-scanned gmail IDs to avoid duplicates
+  // Fetch all seen gmail IDs (including dismissed/saved) so they never resurface
   const existing = await db.execute({
     sql: 'SELECT gmail_id FROM email_digests WHERE user_id = ?',
     args: [userId],
@@ -326,12 +326,11 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const result = await db.execute({
-    sql: 'SELECT * FROM email_digests WHERE user_id = ? ORDER BY date DESC',
+    sql: 'SELECT * FROM email_digests WHERE user_id = ? AND saved = 0 AND dismissed = 0 ORDER BY date DESC',
     args: [userId],
   })
 
   return NextResponse.json(result.rows
-    .filter(r => Number(r.saved ?? 0) === 0)
     .map(r => ({
       id: String(r.id ?? ''),
       gmail_id: String(r.gmail_id ?? ''),

@@ -7,13 +7,14 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const result = await db.execute({
-    sql: 'SELECT domain, name FROM gmail_providers WHERE user_id = ? ORDER BY created_at ASC',
+    sql: 'SELECT domain, name, next_page_token FROM gmail_providers WHERE user_id = ? ORDER BY created_at ASC',
     args: [userId],
   })
 
   return NextResponse.json(result.rows.map(r => ({
     domain: String(r.domain),
     name: String(r.name),
+    nextPageToken: r.next_page_token ? String(r.next_page_token) : '',
   })))
 }
 

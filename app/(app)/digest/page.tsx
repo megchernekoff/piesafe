@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X } from 'lucide-react'
 
 interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
-interface SavedProvider { name: string; domain: string }
+interface SavedProvider { name: string; domain: string; nextPageToken?: string }
 interface DigestRecipe { title: string; description: string; url?: string; ingredients?: string[]; instructions?: string[]; tags?: string[]; prep_time?: number | null; cook_time?: number | null; servings?: number | null }
 interface Digest {
   id: string
@@ -83,7 +83,11 @@ export default function DigestPage() {
       } else {
         setConnected('connected')
         setDigests(scanData)
-        setSavedProviders(Array.isArray(providerData) ? providerData : [])
+        const providers = Array.isArray(providerData) ? providerData : []
+        setSavedProviders(providers)
+        const tokens: Record<string, string> = {}
+        providers.forEach((p: SavedProvider) => { if (p.nextPageToken) tokens[p.domain] = p.nextPageToken })
+        setNextPageTokens(tokens)
       }
     }).catch(() => setConnected(null))
       .finally(() => setLoading(false))
@@ -118,7 +122,9 @@ export default function DigestPage() {
     setSavedProviders(prev => prev.filter(p => p.domain !== domain))
   }
 
-  async function scanProvider(domain: string, name: string, pageToken = '') {
+  async function scanProvider(domain: string, name: string, pageToken = '', isLoadMore = false) {
+    // Fresh scan resets the token
+    if (!isLoadMore) setNextPageTokens(prev => ({ ...prev, [domain]: '' }))
     setScanning(domain)
     const res = await fetch('/api/gmail/scan', {
       method: 'POST',
@@ -406,7 +412,7 @@ export default function DigestPage() {
                 if (!token) return null
                 return (
                   <button key={p.domain} className="btn-secondary"
-                    onClick={() => scanProvider(p.domain, p.name, token)}
+                    onClick={() => scanProvider(p.domain, p.name, token, true)}
                     disabled={scanning === p.domain}
                     style={{ alignSelf: 'flex-start', fontSize: '0.82rem', marginTop: '0.5rem' }}>
                     {scanning === p.domain

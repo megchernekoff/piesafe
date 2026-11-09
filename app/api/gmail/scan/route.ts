@@ -318,6 +318,12 @@ ${cleanText}`,
     digests.push({ id: msg.id, gmail_id: msg.id, sender: from, subject, date, summary, saved: 0, _debug: debugInfo })
   }
 
+  // Persist the nextPageToken so Load more works after page refresh
+  await db.execute({
+    sql: 'UPDATE gmail_providers SET next_page_token = ? WHERE user_id = ? AND domain = ?',
+    args: [nextPageToken || null, userId, domain],
+  })
+
   return NextResponse.json({ digests, nextPageToken })
 }
 

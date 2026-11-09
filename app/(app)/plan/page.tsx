@@ -154,10 +154,31 @@ function DinnerChat({ dinner, onApplyTweak }: { dinner: Dinner; onApplyTweak: (u
   )
 }
 
-function DayPanel({ day, onClose, onDinnerUpdate }: { day: DayPlan; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
-  const d = day.dinner!
+function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; weekStart: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
+  const [currentDinner, setCurrentDinner] = useState(day.dinner!)
+  const d = currentDinner
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [swapping, setSwapping] = useState(false)
+  const [swapReason, setSwapReason] = useState('')
+  const [showSwap, setShowSwap] = useState(false)
+
+  async function swapDay() {
+    setSwapping(true)
+    const res = await fetch('/api/meal-plan/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekStart, dayName: day.day, reason: swapReason }),
+    })
+    const data = await res.json()
+    if (data.dinner) {
+      setCurrentDinner(data.dinner)
+      onDinnerUpdate(data.dinner)
+      setShowSwap(false)
+      setSwapReason('')
+    }
+    setSwapping(false)
+  }
 
   async function saveToBox() {
     setSaving(true)
@@ -234,7 +255,29 @@ function DayPanel({ day, onClose, onDinnerUpdate }: { day: DayPlan; onClose: () 
         </div>
 
         <hr className="divider" />
-        <DinnerChat dinner={d} onApplyTweak={onDinnerUpdate} />
+
+        {/* Swap this day */}
+        {!showSwap ? (
+          <button className="btn-ghost" onClick={() => setShowSwap(true)}
+            style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginBottom: '0.5rem' }}>
+            ↺ Suggest something different for {day.day}
+          </button>
+        ) : (
+          <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <input className="input" placeholder="Any preference? e.g. something Italian, vegetarian, quick…"
+              value={swapReason} onChange={e => setSwapReason(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && swapDay()}
+              style={{ fontSize: '0.85rem' }} />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn-primary" onClick={swapDay} disabled={swapping} style={{ fontSize: '0.82rem' }}>
+                {swapping ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Finding…</> : '↺ Swap this day'}
+              </button>
+              <button className="btn-ghost" onClick={() => setShowSwap(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <DinnerChat dinner={d} onApplyTweak={(updated) => { setCurrentDinner(updated); onDinnerUpdate(updated) }} />
       </div>
     </div>
   )
@@ -347,7 +390,7 @@ function PlanChat({ plan, onRegenerate }: { plan: Plan; onRegenerate: (tweaks: s
             const feedback = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n')
             onRegenerate(feedback)
           }}>
-          <ChefHat size={13} /> Regenerate with this feedback
+          <ChefHat size={13} /> Regenerate entire plan with this feedback
         </button>
       )}
     </div>
@@ -514,7 +557,7 @@ export default function PlanPage() {
   return (
     <div>
       {selectedDay && (
-        <DayPanel day={selectedDay} onClose={() => setSelectedDay(null)}
+        <DayPanel day={selectedDay} weekStart={weekStart} onClose={() => setSelectedDay(null)}
           onDinnerUpdate={(updated) => {
             setSelectedDay(prev => prev ? { ...prev, dinner: updated } : prev)
             setPlan(prev => prev ? {

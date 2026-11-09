@@ -16,14 +16,23 @@ export async function POST(req: NextRequest) {
     .map((d: { day: string; dinner: { title: string } }) => `${d.day}: ${d.dinner.title}`)
     .join('\n')
 
+  // Fetch saved recipes for context
+  const recipesResult = await db.execute({
+    sql: "SELECT title FROM recipes WHERE user_id = ? AND ingredients != '[]' ORDER BY created_at DESC LIMIT 20",
+    args: [userId],
+  })
+  const savedRecipes = recipesResult.rows.map(r => r.title as string)
+
   const system = `You are a helpful meal planning assistant. The user has a generated weekly dinner plan and wants to discuss changes or ask questions about it.
 
 Current plan:
 ${mealSummary}
 
+${savedRecipes.length > 0 ? `Recipes in their Recipe Box (can suggest using these): ${savedRecipes.join(', ')}` : ''}
+
 ${plan.rationale ? `Why this plan was chosen: ${plan.rationale}` : ''}
 
-Help the user refine the plan. If they want to swap meals, suggest alternatives. Be conversational and concise.
+Help the user refine the plan. If they want to swap one day, suggest a specific replacement. Be conversational and concise. Note: "Regenerate entire plan" button will rebuild the whole week — suggest it only for major overhauls.
 
 IMPORTANT: If the user expresses a food dislike or aversion (e.g. "I don't like polenta", "no more mushrooms", "I hate cilantro", "avoid shellfish"), you must:
 1. Acknowledge it warmly in your reply

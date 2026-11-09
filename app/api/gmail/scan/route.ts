@@ -238,13 +238,12 @@ export async function POST(req: NextRequest) {
 
     const rawHtml = extractBody(msgData.payload ?? {})
     const fullText = rawHtml
-      .replace(/<[^>]*>/g, ' ')   // strip HTML tags
-      .replace(/&#\d+;/g, ' ')    // strip numeric HTML entities (&#8199; &#173; etc.)
-      .replace(/&nbsp;/g, ' ')    // strip non-breaking spaces
-      .replace(/&[a-z]+;/g, ' ')  // strip named entities (&amp; &quot; etc.)
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&#\d+;/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&[a-z]+;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-    // Skip the first 15% of long emails — newsletter preambles push recipes down
     const skipChars = fullText.length > 6000 ? Math.floor(fullText.length * 0.15) : 0
     const cleanText = fullText.slice(skipChars, skipChars + 8000)
 
@@ -252,7 +251,7 @@ export async function POST(req: NextRequest) {
     const recipeLinks = extractRecipeLinks(rawHtml, domain)
     // Smarter text extraction: prioritize content after the first 20% of the email
     // (Substack emails have long preambles before the actual recipes)
-    const debugInfo = { htmlLength: rawHtml.length, recipeLinks, jsonLdResults: [] as string[] }
+    const debugInfo = { htmlLength: rawHtml.length, textLen: fullText.length, skipChars, windowStart: cleanText.slice(0, 150), recipeLinks, jsonLdResults: [] as string[] }
     const fullRecipes: { title: string; description: string; url: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null }[] = []
 
     for (const link of recipeLinks) {

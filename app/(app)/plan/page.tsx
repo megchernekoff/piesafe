@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { ChefHat, Loader2, ShoppingCart, ClipboardList, Calendar, X, Send, BookmarkPlus, Check } from 'lucide-react'
+import { ChefHat, Loader2, ShoppingCart, ClipboardList, Calendar, X, Send, BookmarkPlus, Check, Camera } from 'lucide-react'
 
 interface Dinner {
   title: string
@@ -288,7 +288,19 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [savedToast, setSavedToast] = useState<string[]>([])
+  const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; preview: string } | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  function handleImageFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string
+      const base64 = dataUrl.split(',')[1]
+      setPendingImage({ base64, mimeType: file.type, preview: dataUrl })
+    }
+    reader.readAsDataURL(file)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -296,15 +308,18 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
 
   async function send() {
     const text = input.trim()
-    if (!text || thinking) return
+    if ((!text && !pendingImage) || thinking) return
     setInput('')
+    const image = pendingImage
+    setPendingImage(null)
     const history = messages.map(m => ({ role: m.role, content: m.content }))
-    setMessages(prev => [...prev, { role: 'user', content: text }])
+    const displayText = text || '📷 [Recipe screenshot]'
+    setMessages(prev => [...prev, { role: 'user', content: displayText }])
     setThinking(true)
     const res = await fetch('/api/plan-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, message: text, history }),
+      body: JSON.stringify({ plan, message: text || 'I\'ve attached a recipe screenshot. Please extract the recipe and suggest which day to add it, or ask me which day I want it on.', history, image }),
     })
     const data = await res.json()
     setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
@@ -379,15 +394,31 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
         </div>
       )}
 
+      {pendingImage && (
+        <div style={{ marginBottom: '0.5rem', position: 'relative', display: 'inline-block' }}>
+          <img src={pendingImage.preview} alt="recipe" style={{ height: 80, borderRadius: 6, border: '1px solid var(--stone-dark)' }} />
+          <button onClick={() => setPendingImage(null)} className="btn-ghost"
+            style={{ position: 'absolute', top: -6, right: -6, background: 'var(--lavender)', color: 'white', borderRadius: '50%', padding: '0.15rem', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={10} />
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: lastAssistantMessage ? '0.75rem' : 0 }}>
+        <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = '' }} />
+        <button className="btn-ghost" onClick={() => imageInputRef.current?.click()}
+          title="Attach recipe screenshot" style={{ padding: '0.65rem 0.75rem', flexShrink: 0 }}>
+          <Camera size={15} />
+        </button>
         <input className="input"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Swap Thursday, make it lighter, add a pasta night…"
+          placeholder="Swap a day, attach a screenshot, ask anything…"
           style={{ flex: 1, fontSize: '0.85rem' }}
         />
-        <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
+        <button className="btn-primary" onClick={send} disabled={thinking || (!input.trim() && !pendingImage)}
           style={{ padding: '0.65rem 0.85rem' }}>
           <Send size={14} />
         </button>

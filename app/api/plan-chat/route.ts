@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { plan, message, history } = await req.json()
+  const { plan, message, history, image } = await req.json()
 
   const mealSummary = plan.days
     .filter((d: { dinner: { title: string } | null }) => d.dinner)
@@ -58,9 +58,16 @@ IMPORTANT — FOOD DISLIKES: If the user expresses a food dislike, acknowledge i
 
 Only include the <preferences> block if the user is genuinely expressing a dislike to remember. Do not include it for one-off meal swaps or general questions.`
 
+  const userContent = image
+    ? [
+        { type: 'image' as const, source: { type: 'base64' as const, media_type: image.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: image.base64 } },
+        { type: 'text' as const, text: message },
+      ]
+    : message
+
   const messages = [
     ...(history || []),
-    { role: 'user' as const, content: message },
+    { role: 'user' as const, content: userContent },
   ]
 
   const response = await anthropic.messages.create({

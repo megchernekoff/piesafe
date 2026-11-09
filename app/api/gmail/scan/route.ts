@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
     const recipeLinks = extractRecipeLinks(rawHtml, domain)
     // Smarter text extraction: prioritize content after the first 20% of the email
     // (Substack emails have long preambles before the actual recipes)
-    const debugInfo = { htmlLength: rawHtml.length, textLen: fullText.length, skipChars, windowStart: cleanText.slice(0, 150), recipeLinks, jsonLdResults: [] as string[] }
+    const debugInfo = { htmlLength: rawHtml.length, textLen: fullText.length, skipChars, windowStart: cleanText.slice(0, 150), recipeLinks, jsonLdResults: [] as string[], claudeRaw: '' }
     const fullRecipes: { title: string; description: string; url: string; ingredients: string[]; instructions: string[]; tags: string[]; prep_time: number | null; cook_time: number | null; servings: number | null }[] = []
 
     for (const link of recipeLinks) {
@@ -304,10 +304,10 @@ ${cleanText}`,
       })
       try {
         const raw = (claudeRes.content[0] as { text: string }).text
+        debugInfo.claudeRaw = raw.slice(0, 300)
         const match = raw.match(/\[[\s\S]*\]/)
         if (match) {
           const parsed = JSON.parse(match[0])
-          // Try to find a matching link for each recipe title
           summary = parsed.map((recipe: { title: string; description: string }) => {
             const titleLower = recipe.title.toLowerCase()
             const matched = anchorMap.find(a =>
@@ -317,7 +317,7 @@ ${cleanText}`,
             return { ...recipe, url: matched?.href ?? null }
           })
         }
-      } catch { summary = [] }
+      } catch (e) { summary = []; debugInfo.claudeRaw = 'ERROR: ' + String(e) }
     }
 
     await db.execute({

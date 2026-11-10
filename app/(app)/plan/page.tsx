@@ -645,16 +645,22 @@ export default function PlanPage() {
 
   async function generate(extraTweaks?: string) {
     setLoading(true)
-    const combinedTweaks = [tweaks, extraTweaks].filter(Boolean).join('\n')
-    const res = await fetch('/api/meal-plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tweaks: combinedTweaks, nights }),
-    })
-    const data = await res.json()
-    setPlan(data)
-    setChecked(new Set())
-    setLoading(false)
+    try {
+      const combinedTweaks = [tweaks, extraTweaks].filter(Boolean).join('\n')
+      const res = await fetch('/api/meal-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tweaks: combinedTweaks, nights }),
+      })
+      const data = await res.json()
+      if (data.error) { console.error('Generate error:', data.error); return }
+      setPlan(data)
+      setChecked(new Set())
+    } catch (e) {
+      console.error('Generate failed:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const weekLabel = () => {

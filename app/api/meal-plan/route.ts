@@ -142,40 +142,33 @@ Return only valid JSON, no markdown.`
     return NextResponse.json({ error: 'Failed to parse meal plan from AI response.' }, { status: 500 })
   }
 
-  // Insert plan header
-  const planResult = await db.execute({
-    sql: `INSERT INTO meal_plans (user_id, week_start_date, rationale, grocery_list, prep_notes, meals)
-          VALUES (?, ?, ?, ?, ?, ?)`,
+  // Insert plan header using a generated UUID
+  const newPlanId = `plan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+  await db.execute({
+    sql: `INSERT INTO meal_plans (id, user_id, week_start_date, rationale, grocery_list, prep_notes, meals)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
     args: [
+      newPlanId,
       userId,
-      new Date().toISOString().split('T')[0], // kept for compat, not used as key
+      new Date().toISOString().split('T')[0],
       plan.rationale ?? '',
       JSON.stringify(plan.grocery_list ?? []),
       JSON.stringify(plan.prep_notes ?? []),
-      '[]', // legacy column kept empty
+      '[]',
     ],
   })
 
-  const planId = String(planResult.lastInsertRowid ?? '')
-  // Get the actual id (uuid) from the insert
-  const inserted = await db.execute({
-    sql: 'SELECT id FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
-    args: [userId],
-  })
-  const actualPlanId = inserted.rows[0]?.id as string
-
   // Insert each day
   for (let i = 0; i < plan.days.length; i++) {
-    const d = plan.days[i]
     await db.execute({
       sql: 'INSERT INTO meal_plan_days (plan_id, user_id, day_number, dinner) VALUES (?,?,?,?)',
-      args: [actualPlanId, userId, i + 1, JSON.stringify(d.dinner)],
+      args: [newPlanId, userId, i + 1, JSON.stringify(plan.days[i].dinner)],
     })
   }
-  void planId
 
   return NextResponse.json({
-    id: actualPlanId,
+    id: newPlanId,
     rationale: plan.rationale,
     days: plan.days,
     grocery_list: plan.grocery_list ?? [],

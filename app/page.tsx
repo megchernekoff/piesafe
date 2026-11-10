@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
-import Link from 'next/link'
-import { SignUpButton, SignInButton } from '@clerk/nextjs'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { SignUpButton, SignInButton, useAuth } from '@clerk/nextjs'
 import { Loader2 } from 'lucide-react'
 import PieIcon from '@/components/icons/PieIcon'
 import LavenderSprig from '@/components/icons/LavenderSprig'
@@ -22,6 +22,13 @@ interface DayPlan {
 }
 
 export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) router.replace('/plan')
+  }, [isLoaded, isSignedIn, router])
+
   const [dietary, setDietary] = useState<string[]>([])
   const [dislikeInput, setDislikeInput] = useState('')
   const [dislikes, setDislikes] = useState<string[]>([])

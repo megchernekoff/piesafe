@@ -261,7 +261,7 @@ function RecipeChat({ recipe }: { recipe: Recipe }) {
   )
 }
 
-type ImportTab = 'url' | 'photo'
+type ImportTab = 'url' | 'photo' | 'prompt'
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
@@ -279,6 +279,10 @@ export default function RecipesPage() {
   const [importingPhoto, setImportingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [promptText, setPromptText] = useState('')
+  const [generatingPrompt, setGeneratingPrompt] = useState(false)
+  const [promptError, setPromptError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -337,6 +341,25 @@ export default function RecipesPage() {
     setImportingPhoto(false)
   }
 
+  async function handleGenerateFromPrompt() {
+    if (!promptText.trim()) return
+    setGeneratingPrompt(true)
+    setPromptError('')
+    const res = await fetch('/api/recipes/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: promptText }),
+    })
+    const data = await res.json()
+    if (data.error) {
+      setPromptError(data.error)
+    } else {
+      setPromptText('')
+      load()
+    }
+    setGeneratingPrompt(false)
+  }
+
   async function handleDelete(id: string) {
     await fetch(`/api/recipes?id=${id}`, { method: 'DELETE' })
     setSelected(null)
@@ -385,6 +408,12 @@ export default function RecipesPage() {
             className={importTab === 'photo' ? 'btn-primary' : 'btn-secondary'}
             style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
             <Camera size={13} /> From Photo
+          </button>
+          <button
+            onClick={() => { setImportTab('prompt'); setImportError(''); setPhotoError(''); setPromptError('') }}
+            className={importTab === 'prompt' ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+            ✦ From Prompt
           </button>
         </div>
 
@@ -468,6 +497,31 @@ export default function RecipesPage() {
             </div>
             {photoError && (
               <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{photoError}</p>
+            )}
+          </div>
+        )}
+
+        {importTab === 'prompt' && (
+          <div>
+            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Describe the recipe you want</div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '0.75rem' }}>
+              Claude will generate a full recipe and save it to your box.
+            </p>
+            <textarea className="textarea"
+              placeholder="e.g. A quick weeknight pasta with lemon and ricotta, vegetarian, ready in 30 minutes…"
+              value={promptText}
+              onChange={e => setPromptText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleGenerateFromPrompt() }}
+              style={{ marginBottom: '0.75rem', minHeight: '90px' }}
+            />
+            <button className="btn-primary" onClick={handleGenerateFromPrompt}
+              disabled={generatingPrompt || !promptText.trim()}>
+              {generatingPrompt
+                ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Creating recipe…</>
+                : '✦ Create recipe'}
+            </button>
+            {promptError && (
+              <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{promptError}</p>
             )}
           </div>
         )}

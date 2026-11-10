@@ -17,7 +17,7 @@ interface Dinner {
 interface DayPlan { day: string; dinner: Dinner | null }
 interface GroceryItem { item: string; amount: string; category: string }
 interface Plan {
-  weekStart: string
+  id: string
   rationale?: string
   days: DayPlan[]
   grocery_list: GroceryItem[]
@@ -36,7 +36,7 @@ function getMonday(d = new Date()): string {
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
 
-function DinnerChat({ dinner, dayName, weekStart, onApplyTweak }: { dinner: Dinner; dayName: string; weekStart: string; onApplyTweak: (updated: Dinner) => void }) {
+function DinnerChat({ dinner, dayName, planId, onApplyTweak }: { dinner: Dinner; dayName: string; planId: string; onApplyTweak: (updated: Dinner) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
@@ -94,7 +94,7 @@ function DinnerChat({ dinner, dayName, weekStart, onApplyTweak }: { dinner: Dinn
         fetch('/api/meal-plan/swap', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weekStart, dayName, prebuiltDinner: updated }),
+          body: JSON.stringify({ planId, dayName, prebuiltDinner: updated }),
         }).catch(() => {})
         // Also enrich the matching recipe in the Recipe Box
         fetch('/api/recipes', {
@@ -214,7 +214,7 @@ function DinnerChat({ dinner, dayName, weekStart, onApplyTweak }: { dinner: Dinn
   )
 }
 
-function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; weekStart: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
+function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; planId: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
 
   const [currentDinner, setCurrentDinner] = useState(day.dinner!)
   // Sync if parent updates the dinner (e.g. from plan chat swap)
@@ -231,7 +231,7 @@ function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; w
     const res = await fetch('/api/meal-plan/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, dayName: day.day, reason: swapReason }),
+      body: JSON.stringify({ planId, dayName: day.day, reason: swapReason }),
     })
     const data = await res.json()
     if (data.dinner) {
@@ -348,7 +348,7 @@ function DayPanel({ day, weekStart, onClose, onDinnerUpdate }: { day: DayPlan; w
           </div>
         )}
 
-        <DinnerChat dinner={d} dayName={day.day} weekStart={weekStart} onApplyTweak={(updated) => { setCurrentDinner(updated); onDinnerUpdate(updated) }} />
+        <DinnerChat dinner={d} dayName={day.day} planId={planId} onApplyTweak={(updated) => { setCurrentDinner(updated); onDinnerUpdate(updated) }} />
       </div>
     </div>
   )
@@ -512,7 +512,7 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
 
 const CATEGORY_ORDER = ['produce', 'protein', 'dairy', 'pantry', 'other']
 
-function GroceryView({ plan, weekStart, onPlanUpdate }: { plan: Plan; weekStart: string; onPlanUpdate: (p: Plan) => void }) {
+function GroceryView({ plan, onPlanUpdate }: { plan: Plan; onPlanUpdate: (p: Plan) => void }) {
   const [newItem, setNewItem] = useState('')
   const [adding, setAdding] = useState(false)
 
@@ -523,7 +523,7 @@ function GroceryView({ plan, weekStart, onPlanUpdate }: { plan: Plan; weekStart:
     await fetch('/api/meal-plan', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, action, ...payload }),
+      body: JSON.stringify({ planId: plan.id, action, ...payload }),
     })
   }
 
@@ -638,7 +638,7 @@ export default function PlanPage() {
         if (data) {
           setPlan(data)
           // Sync weekStart to whatever the loaded plan was saved under
-          if (data.weekStart) setWeekStart(data.weekStart)
+          // weekStart no longer needed as key
         }
       })
   }, []) // only on mount
@@ -649,7 +649,7 @@ export default function PlanPage() {
     const res = await fetch('/api/meal-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, tweaks: combinedTweaks, nights }),
+      body: JSON.stringify({ tweaks: combinedTweaks, nights }),
     })
     const data = await res.json()
     setPlan(data)
@@ -658,10 +658,8 @@ export default function PlanPage() {
   }
 
   const weekLabel = () => {
-    const start = new Date(weekStart + 'T12:00:00')
-    const end = new Date(start)
-    end.setDate(end.getDate() + 6)
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    const now = new Date()
+    return now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   }
 
   const groceryByCategory = () => {
@@ -677,7 +675,7 @@ export default function PlanPage() {
   return (
     <div>
       {selectedDay && (
-        <DayPanel day={selectedDay} weekStart={weekStart} onClose={() => setSelectedDay(null)}
+        <DayPanel day={selectedDay} planId={plan!.id} onClose={() => setSelectedDay(null)}
           onDinnerUpdate={(updated) => {
             setSelectedDay(prev => prev ? { ...prev, dinner: updated } : prev)
             setPlan(prev => prev ? {
@@ -790,7 +788,7 @@ export default function PlanPage() {
           )}
 
           {view === 'grocery' && (
-            <GroceryView plan={plan} weekStart={weekStart} onPlanUpdate={setPlan} />
+            <GroceryView plan={plan} onPlanUpdate={setPlan} />
           )}
 
           {view === 'prep' && (

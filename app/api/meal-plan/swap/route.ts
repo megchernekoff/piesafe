@@ -13,31 +13,30 @@ function extractJSON(text: string): string {
   return text
 }
 
+function dayNumberFromName(dayName: string): number {
+  const match = dayName.match(/\d+/)
+  return match ? parseInt(match[0]) : 1
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { weekStart, dayName, reason, prebuiltDinner } = await req.json()
+  const { planId, dayName, reason, prebuiltDinner } = await req.json()
+  if (!planId || !dayName) return NextResponse.json({ error: 'planId and dayName required' }, { status: 400 })
 
-  // If a pre-built dinner is provided, skip generation and just save it
+  const dayNumber = dayNumberFromName(dayName)
+
+  // If a pre-built dinner is provided, just save it directly
   if (prebuiltDinner) {
-    const planResult = await db.execute({
-      sql: 'SELECT meals FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
-      args: [userId, weekStart],
+    await db.execute({
+      sql: 'INSERT INTO meal_plan_days (plan_id, user_id, day_number, dinner) VALUES (?,?,?,?) ON CONFLICT(plan_id, day_number) DO UPDATE SET dinner = excluded.dinner',
+      args: [planId, userId, dayNumber, JSON.stringify(prebuiltDinner)],
     })
-    if (planResult.rows.length > 0) {
-      const days = JSON.parse((planResult.rows[0].meals as string) || '[]')
-      const updated = days.map((d: { day: string }) =>
-        d.day === dayName ? { ...d, dinner: prebuiltDinner } : d
-      )
-      await db.execute({
-        sql: 'UPDATE meal_plans SET meals = ? WHERE user_id = ? AND week_start_date = ?',
-        args: [JSON.stringify(updated), userId, weekStart],
-      })
-    }
     return NextResponse.json({ dinner: prebuiltDinner })
   }
 
+  // Generate a new dinner via Claude
   const profileResult = await db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] })
   const profile = profileResult.rows[0] ?? null
   const dislikes: string[] = profile ? JSON.parse((profile.dislikes as string) || '[]') : []
@@ -56,18 +55,8 @@ ${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${reason ? `The user wants: ${reason}` : ''}
 Serves ${householdSize} people.
 
-Return a single JSON object (not an array):
-{
-  "title": "Dish name",
-  "description": "One appetising sentence",
-  "prep_time": 15,
-  "cook_time": 30,
-  "servings": ${householdSize},
-  "ingredients": ["amount + ingredient"],
-  "instructions": ["Step 1"],
-  "toddler_notes": ${toddlerMode ? '"Brief adaptation"' : 'null'},
-  "tags": ["tag"]
-}
+Return a single JSON object:
+{"title":"...","description":"...","prep_time":15,"cook_time":30,"servings":${householdSize},"ingredients":["..."],"instructions":["..."],"toddler_notes":${toddlerMode ? '"Brief adaptation"' : 'null'},"tags":["..."]}
 Return only valid JSON.`,
     }],
   })
@@ -79,22 +68,10 @@ Return only valid JSON.`,
     return NextResponse.json({ error: 'Failed to generate replacement' }, { status: 500 })
   }
 
-  // Update just this day in the stored plan
-  const planResult = await db.execute({
-    sql: 'SELECT meals FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
-    args: [userId, weekStart],
+  await db.execute({
+    sql: 'INSERT INTO meal_plan_days (plan_id, user_id, day_number, dinner) VALUES (?,?,?,?) ON CONFLICT(plan_id, day_number) DO UPDATE SET dinner = excluded.dinner',
+    args: [planId, userId, dayNumber, JSON.stringify(dinner)],
   })
-
-  if (planResult.rows.length > 0) {
-    const days = JSON.parse((planResult.rows[0].meals as string) || '[]')
-    const updated = days.map((d: { day: string }) =>
-      d.day === dayName ? { ...d, dinner } : d
-    )
-    await db.execute({
-      sql: 'UPDATE meal_plans SET meals = ? WHERE user_id = ? AND week_start_date = ?',
-      args: [JSON.stringify(updated), userId, weekStart],
-    })
-  }
 
   return NextResponse.json({ dinner })
 }

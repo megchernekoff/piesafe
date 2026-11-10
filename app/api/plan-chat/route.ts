@@ -145,22 +145,13 @@ Only include the <preferences> block if the user is genuinely expressing a disli
         })
       }
 
-      // Update DB if we have the recipe
-      if (recipe && plan?.weekStart) {
-        const planResult = await db.execute({
-          sql: 'SELECT meals FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
-          args: [userId, plan.weekStart],
+      // Update DB using new meal_plan_days table
+      if (recipe && plan?.id) {
+        const dayNumber = parseInt(day.replace(/\D/g, '')) || 1
+        await db.execute({
+          sql: 'INSERT INTO meal_plan_days (plan_id, user_id, day_number, dinner) VALUES (?,?,?,?) ON CONFLICT(plan_id, day_number) DO UPDATE SET dinner = excluded.dinner',
+          args: [plan.id, userId, dayNumber, JSON.stringify(recipe)],
         })
-        if (planResult.rows.length > 0) {
-          const days = JSON.parse((planResult.rows[0].meals as string) || '[]')
-          const updated = days.map((d: { day: string }) =>
-            d.day === day ? { ...d, dinner: recipe } : d
-          )
-          await db.execute({
-            sql: 'UPDATE meal_plans SET meals = ? WHERE user_id = ? AND week_start_date = ?',
-            args: [JSON.stringify(updated), userId, plan.weekStart],
-          })
-        }
       }
     } catch { /* ignore */ }
   }

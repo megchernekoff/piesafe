@@ -13,47 +13,50 @@ function extractJSON(text: string): string {
   return text
 }
 
+async function loadPlanWithDays(planRow: Record<string, unknown>) {
+  const planId = planRow.id as string
+  const daysResult = await db.execute({
+    sql: 'SELECT day_number, dinner FROM meal_plan_days WHERE plan_id = ? ORDER BY day_number ASC',
+    args: [planId],
+  })
+  const days = daysResult.rows.map(r => ({
+    day: `Day ${r.day_number}`,
+    dinner: JSON.parse((r.dinner as string) || '{}'),
+  }))
+  return {
+    id: planId,
+    rationale: planRow.rationale as string | undefined,
+    days,
+    grocery_list: JSON.parse((planRow.grocery_list as string) || '[]'),
+    grocery_custom: JSON.parse((planRow.grocery_custom as string) || '[]'),
+    grocery_checked: JSON.parse((planRow.grocery_checked as string) || '[]'),
+    prep_notes: JSON.parse((planRow.prep_notes as string) || '[]'),
+  }
+}
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const weekStart = new URL(req.url).searchParams.get('weekStart')
-
-  const result = weekStart
-    ? await db.execute({
-        sql: 'SELECT * FROM meal_plans WHERE user_id = ? AND week_start_date = ? ORDER BY created_at DESC LIMIT 1',
-        args: [userId, weekStart],
-      })
-    : await db.execute({
-        sql: 'SELECT * FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
-        args: [userId],
-      })
-
+  const result = await db.execute({
+    sql: 'SELECT * FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+    args: [userId],
+  })
   if (result.rows.length === 0) return NextResponse.json(null)
 
-  const row = result.rows[0]
-  return NextResponse.json({
-    id: row.id,
-    weekStart: row.week_start_date,
-    days: JSON.parse((row.meals as string) || '[]'),
-    grocery_list: JSON.parse((row.grocery_list as string) || '[]'),
-    grocery_custom: JSON.parse((row.grocery_custom as string) || '[]'),
-    grocery_checked: JSON.parse((row.grocery_checked as string) || '[]'),
-    prep_notes: JSON.parse((row.prep_notes as string) || '[]'),
-  })
+  return NextResponse.json(await loadPlanWithDays(result.rows[0] as Record<string, unknown>))
 }
 
 export async function PATCH(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { weekStart, action, item, key } = await req.json()
-  if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
+  const { planId, action, item, key } = await req.json()
+  if (!planId) return NextResponse.json({ error: 'planId required' }, { status: 400 })
 
   const result = await db.execute({
-    sql: 'SELECT grocery_custom, grocery_checked FROM meal_plans WHERE user_id = ? AND week_start_date = ?',
-    args: [userId, weekStart],
+    sql: 'SELECT grocery_custom, grocery_checked FROM meal_plans WHERE id = ? AND user_id = ?',
+    args: [planId, userId],
   })
   if (result.rows.length === 0) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
 
@@ -63,29 +66,14 @@ export async function PATCH(req: NextRequest) {
 
   if (action === 'add') {
     custom.push({ item: item.item, amount: item.amount || '', category: item.category || 'other' })
-    await db.execute({
-      sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE user_id = ? AND week_start_date = ?',
-      args: [JSON.stringify(custom), userId, weekStart],
-    })
+    await db.execute({ sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE id = ?', args: [JSON.stringify(custom), planId] })
   } else if (action === 'check') {
-    // key is "cat-idx" for generated items or "custom-idx" for custom items
     if (!checked.includes(key)) checked.push(key)
-    await db.execute({
-      sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE user_id = ? AND week_start_date = ?',
-      args: [JSON.stringify(checked), userId, weekStart],
-    })
+    await db.execute({ sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE id = ?', args: [JSON.stringify(checked), planId] })
   } else if (action === 'uncheck') {
-    const next = checked.filter(k => k !== key)
-    await db.execute({
-      sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE user_id = ? AND week_start_date = ?',
-      args: [JSON.stringify(next), userId, weekStart],
-    })
+    await db.execute({ sql: 'UPDATE meal_plans SET grocery_checked = ? WHERE id = ?', args: [JSON.stringify(checked.filter(k => k !== key)), planId] })
   } else if (action === 'remove-custom') {
-    const next = custom.filter((_, i) => `custom-${i}` !== key)
-    await db.execute({
-      sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE user_id = ? AND week_start_date = ?',
-      args: [JSON.stringify(next), userId, weekStart],
-    })
+    await db.execute({ sql: 'UPDATE meal_plans SET grocery_custom = ? WHERE id = ?', args: [JSON.stringify(custom.filter((_, i) => `custom-${i}` !== key)), planId] })
   }
 
   return NextResponse.json({ success: true })
@@ -95,8 +83,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { weekStart, tweaks, nights = 7 } = await req.json()
-  if (!weekStart) return NextResponse.json({ error: 'weekStart required' }, { status: 400 })
+  const { tweaks, nights = 7 } = await req.json()
 
   const [profileResult, recipesResult] = await Promise.all([
     db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] }),
@@ -110,65 +97,35 @@ export async function POST(req: NextRequest) {
   const toddlerAge = profile?.toddler_age as number | null
   const householdSize = (profile?.household_size as number) || 2
 
-  // Only pass recipes that have full ingredient data (photo imports)
   const savedRecipes = recipesResult.rows
-    .filter(r => {
-      const ingredients = JSON.parse((r.ingredients as string) || '[]')
-      return ingredients.length > 0
-    })
+    .filter(r => JSON.parse((r.ingredients as string) || '[]').length > 0)
     .map(r => ({
       title: r.title as string,
       description: r.description as string,
-      ingredients: JSON.parse((r.ingredients as string) || '[]') as string[],
-      instructions: JSON.parse((r.instructions as string) || '[]') as string[],
       prep_time: r.prep_time as number | null,
       cook_time: r.cook_time as number | null,
-      servings: r.servings as number | null,
-      tags: JSON.parse((r.tags as string) || '[]') as string[],
     }))
 
-  const days = Array.from({ length: nights }, (_, i) => ({ name: `Day ${i + 1}` }))
-
   const savedRecipesBlock = savedRecipes.length > 0
-    ? `\nThe user has these saved recipes — include at most 2 of them this week if they fit well, and fill the rest with fresh AI-generated suggestions:\n${savedRecipes.map(r =>
-        `- ${r.title}${r.description ? `: ${r.description}` : ''}${r.prep_time || r.cook_time ? ` (${[r.prep_time && `${r.prep_time}m prep`, r.cook_time && `${r.cook_time}m cook`].filter(Boolean).join(', ')})` : ''}`
-      ).join('\n')}\nFor any saved recipe you use, copy its exact ingredients and instructions. The majority of meals should be new creative suggestions.\n`
+    ? `\nThe user has these saved recipes — include at most 2 if they fit well, fill the rest with fresh suggestions:\n${savedRecipes.map(r => `- ${r.title}${r.description ? `: ${r.description}` : ''}`).join('\n')}\nThe majority of meals should be new creative suggestions.\n`
     : ''
 
   const prompt = `Generate a ${nights}-day dinner meal plan for a household of ${householdSize} people.
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
-${dislikes.length ? `Never use these ingredients: ${dislikes.join(', ')}.` : ''}
+${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
 ${tweaks ? `Special requests: ${tweaks}` : ''}${savedRecipesBlock}
 
-Days: ${days.map(d => d.name).join(', ')}.
+Days: ${Array.from({ length: nights }, (_, i) => `Day ${i + 1}`).join(', ')}.
 
-Return a JSON object. Be concise — keep ingredients to one line each, instructions to one sentence each:
+Return JSON. Be concise:
 {
-  "rationale": "2-3 sentences explaining why you chose these meals — mention variety, any saved recipes used, how preferences were respected.",
-  "days": [
-    {
-      "day": "Day 1",
-      "dinner": {
-        "title": "Dish name",
-        "description": "One appetising sentence",
-        "prep_time": 15,
-        "cook_time": 30,
-        "servings": ${householdSize},
-        "ingredients": ["2 cups flour", "1 tsp salt", ...],
-        "instructions": ["Step 1.", "Step 2.", ...],
-        "toddler_notes": "Brief adaptation or null",
-        "tags": ["tag1", "tag2"]
-      }
-    }
-  ],
-  "grocery_list": [
-    { "item": "name", "amount": "qty + unit", "category": "produce|protein|dairy|pantry|other" }
-  ],
-  "prep_notes": ["One tip per line."]
+  "rationale": "2-3 sentences on why these meals.",
+  "days": [{"day":"Day 1","dinner":{"title":"...","description":"...","prep_time":15,"cook_time":30,"servings":${householdSize},"ingredients":["..."],"instructions":["..."],"toddler_notes":null,"tags":["..."]}}],
+  "grocery_list": [{"item":"...","amount":"...","category":"produce|protein|dairy|pantry|other"}],
+  "prep_notes": ["..."]
 }
-
-Make varied, delicious, practical meals. Return only valid JSON, no markdown.`
+Return only valid JSON, no markdown.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -177,29 +134,53 @@ Make varied, delicious, practical meals. Return only valid JSON, no markdown.`
   })
 
   const rawText = (message.content[0] as { text: string }).text
-  let plan: { rationale?: string; days: unknown[]; grocery_list: unknown[]; prep_notes: unknown[] }
+  let plan: { rationale?: string; days: { day: string; dinner: unknown }[]; grocery_list: unknown[]; prep_notes: unknown[] }
   try {
     plan = JSON.parse(extractJSON(rawText))
   } catch {
-    console.error('Meal plan parse error. Stop reason:', message.stop_reason, '| Response length:', rawText.length)
+    console.error('Meal plan parse error. Stop reason:', message.stop_reason, '| Length:', rawText.length)
     return NextResponse.json({ error: 'Failed to parse meal plan from AI response.' }, { status: 500 })
   }
 
-  await db.execute({
-    sql: 'DELETE FROM meal_plans WHERE user_id = ? AND week_start_date = ?',
-    args: [userId, weekStart],
-  })
-  await db.execute({
-    sql: `INSERT INTO meal_plans (user_id, week_start_date, meals, grocery_list, prep_notes)
-          VALUES (?, ?, ?, ?, ?)`,
+  // Insert plan header
+  const planResult = await db.execute({
+    sql: `INSERT INTO meal_plans (user_id, week_start_date, rationale, grocery_list, prep_notes, meals)
+          VALUES (?, ?, ?, ?, ?, ?)`,
     args: [
       userId,
-      weekStart,
-      JSON.stringify(plan.days ?? []),
+      new Date().toISOString().split('T')[0], // kept for compat, not used as key
+      plan.rationale ?? '',
       JSON.stringify(plan.grocery_list ?? []),
       JSON.stringify(plan.prep_notes ?? []),
+      '[]', // legacy column kept empty
     ],
   })
 
-  return NextResponse.json({ weekStart, ...plan })
+  const planId = String(planResult.lastInsertRowid ?? '')
+  // Get the actual id (uuid) from the insert
+  const inserted = await db.execute({
+    sql: 'SELECT id FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+    args: [userId],
+  })
+  const actualPlanId = inserted.rows[0]?.id as string
+
+  // Insert each day
+  for (let i = 0; i < plan.days.length; i++) {
+    const d = plan.days[i]
+    await db.execute({
+      sql: 'INSERT INTO meal_plan_days (plan_id, user_id, day_number, dinner) VALUES (?,?,?,?)',
+      args: [actualPlanId, userId, i + 1, JSON.stringify(d.dinner)],
+    })
+  }
+  void planId
+
+  return NextResponse.json({
+    id: actualPlanId,
+    rationale: plan.rationale,
+    days: plan.days,
+    grocery_list: plan.grocery_list ?? [],
+    grocery_custom: [],
+    grocery_checked: [],
+    prep_notes: plan.prep_notes ?? [],
+  })
 }

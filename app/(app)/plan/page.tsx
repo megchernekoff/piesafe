@@ -631,10 +631,17 @@ export default function PlanPage() {
   const updateTweaks = (t: string) => { setTweaks(t); localStorage.setItem('plan-tweaks', t) }
 
   useEffect(() => {
-    fetch(`/api/meal-plan?weekStart=${weekStart}`)
+    // Load most recent plan on initial mount, regardless of weekStart
+    fetch('/api/meal-plan')
       .then(r => r.json())
-      .then(data => { if (data) setPlan(data) })
-  }, [weekStart])
+      .then(data => {
+        if (data) {
+          setPlan(data)
+          // Sync weekStart to whatever the loaded plan was saved under
+          if (data.weekStart) setWeekStart(data.weekStart)
+        }
+      })
+  }, []) // only on mount
 
   async function generate(extraTweaks?: string) {
     setLoading(true)
@@ -686,12 +693,6 @@ export default function PlanPage() {
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
-        <div>
-          <div className="section-label">Week of</div>
-          <input type="date" className="input" value={weekStart}
-            onChange={e => { setWeekStart(e.target.value); setPlan(null) }}
-            style={{ maxWidth: '180px' }} />
-        </div>
         <div>
           <div className="section-label">Nights</div>
           <div style={{ display: 'flex', gap: '0.35rem' }}>

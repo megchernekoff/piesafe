@@ -214,12 +214,39 @@ function DinnerChat({ dinner, dayName, planId, onApplyTweak }: { dinner: Dinner;
   )
 }
 
+function toFraction(n: number): string {
+  if (n === 0) return '0'
+  const whole = Math.floor(n)
+  const dec = n - whole
+  const fracs: [number, string][] = [[1/8,'⅛'],[1/4,'¼'],[1/3,'⅓'],[3/8,'⅜'],[1/2,'½'],[5/8,'⅝'],[2/3,'⅔'],[3/4,'¾'],[7/8,'⅞']]
+  let frac = ''
+  for (const [val, sym] of fracs) { if (Math.abs(dec - val) < 0.07) { frac = sym; break } }
+  if (whole === 0) return frac || n.toFixed(1).replace(/\.0$/, '')
+  return frac ? `${whole} ${frac}` : n % 1 < 0.05 ? String(whole) : n.toFixed(1).replace(/\.0$/, '')
+}
+
+function scaleIngredient(text: string, factor: number): string {
+  if (factor === 1) return text
+  return text.replace(/(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)/g, (match) => {
+    let val: number
+    if (match.includes('/')) {
+      const parts = match.trim().split(/\s+/)
+      if (parts.length === 2) { const [num, den] = parts[1].split('/'); val = parseInt(parts[0]) + parseInt(num) / parseInt(den) }
+      else { const [num, den] = parts[0].split('/'); val = parseInt(num) / parseInt(den) }
+    } else { val = parseFloat(match) }
+    if (isNaN(val)) return match
+    return toFraction(val * factor)
+  })
+}
+
 function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; planId: string; onClose: () => void; onDinnerUpdate: (d: Dinner) => void }) {
 
   const [currentDinner, setCurrentDinner] = useState(day.dinner!)
-  // Sync if parent updates the dinner (e.g. from plan chat swap)
   useEffect(() => { if (day.dinner) setCurrentDinner(day.dinner) }, [day.dinner])
   const d = currentDinner
+  const [servings, setServings] = useState(d.servings || 2)
+  const originalServings = d.servings || 2
+  const scale = servings / originalServings
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [swapping, setSwapping] = useState(false)
@@ -282,7 +309,18 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
         <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem', color: 'var(--ink-light)', alignItems: 'center', flexWrap: 'wrap' }}>
           {d.prep_time && <span>Prep {d.prep_time}m</span>}
           {d.cook_time && <span>Cook {d.cook_time}m</span>}
-          {d.servings && <span>Serves {d.servings}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>Serves</span>
+            <button className="btn-ghost" style={{ padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}
+              onClick={() => setServings(s => Math.max(1, s - 1))}>−</button>
+            <span style={{ fontWeight: 600, color: 'var(--ink)', minWidth: '1.5rem', textAlign: 'center' }}>{servings}</span>
+            <button className="btn-ghost" style={{ padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}
+              onClick={() => setServings(s => s + 1)}>+</button>
+            {scale !== 1 && (
+              <button className="btn-ghost" style={{ fontSize: '0.7rem', color: 'var(--ochre)' }}
+                onClick={() => setServings(originalServings)}>reset</button>
+            )}
+          </div>
           <button
             onClick={saveToBox}
             disabled={saving || saved}
@@ -313,7 +351,7 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
             <div>
               <div className="section-label">Ingredients</div>
               <ul style={{ paddingLeft: '1.2rem', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
-                {d.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+                {d.ingredients.map((ing, i) => <li key={i}>{scaleIngredient(ing, scale)}</li>)}
               </ul>
             </div>
             <div>

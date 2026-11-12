@@ -28,7 +28,13 @@ ${recipe.ingredients.map((i: string) => `- ${i}`).join('\n')}
 Instructions:
 ${recipe.instructions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}` : `The recipe "${recipe.title}" is saved as a link only — no ingredients are stored yet.`}
 
-If a screenshot is uploaded, extract the full recipe details from it and present them clearly. When extracting a recipe from an image, ALWAYS include the full recipe as a JSON object at the end wrapped in <recipe>{"title":"...","description":"...","ingredients":[...],"instructions":[...],"prep_time":15,"cook_time":30,"servings":4,"tags":[]}</recipe> tags so it can be applied automatically. Answer questions about this recipe specifically. Be practical, conversational, and concise.`
+You can help with two things:
+1. Answer questions about the recipe (substitutions, technique, timing, etc.)
+2. Make changes to the recipe when asked — rename it, add or remove ingredients, adjust steps, change servings. When the user asks to make a change, confirm what you changed ("Done — I've renamed it to Trader Joe's Salmon"). The user will then click "Save changes to recipe" and the update will be applied.
+
+If a screenshot is uploaded, extract the full recipe details from it. When extracting a recipe from an image, ALWAYS include the full recipe as a JSON object at the end wrapped in <recipe>{"title":"...","description":"...","ingredients":[...],"instructions":[...],"prep_time":15,"cook_time":30,"servings":4,"tags":[]}</recipe> tags.
+
+Be warm, practical, and concise.`
 
   const userContent = image
     ? [

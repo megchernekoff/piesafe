@@ -55,12 +55,31 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// Enrich a URL-only recipe by finding it by title and filling in missing details
+// Update a recipe by ID (general update) or enrich a URL-only recipe by title match
 export async function PATCH(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { titleMatch, description, ingredients, instructions, prep_time, cook_time, servings, tags } = await req.json()
+  const body = await req.json()
+
+  // If an id is provided, update that specific recipe
+  if (body.id) {
+    const { id, title, description, ingredients, instructions, prep_time, cook_time, servings, tags, toddler_notes } = body
+    await db.execute({
+      sql: `UPDATE recipes SET title=?, description=?, ingredients=?, instructions=?, prep_time=?, cook_time=?, servings=?, tags=?, toddler_notes=?
+            WHERE id=? AND user_id=?`,
+      args: [
+        title ?? '', description ?? '',
+        JSON.stringify(ingredients ?? []), JSON.stringify(instructions ?? []),
+        prep_time ?? null, cook_time ?? null, servings ?? null,
+        JSON.stringify(tags ?? []), toddler_notes ?? null,
+        id, userId,
+      ],
+    })
+    return NextResponse.json({ updated: true, id })
+  }
+
+  const { titleMatch, description, ingredients, instructions, prep_time, cook_time, servings, tags } = body
   if (!titleMatch || !ingredients?.length) return NextResponse.json({ error: 'titleMatch and ingredients required' }, { status: 400 })
 
   // Find matching recipe that has no ingredients yet

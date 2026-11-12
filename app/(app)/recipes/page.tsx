@@ -157,7 +157,7 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
         <hr className="divider" />
 
         {/* Recipe chat */}
-        <RecipeChat recipe={recipe} />
+        <RecipeChat recipe={recipe} onUpdate={(updated) => onRefresh(updated)} />
 
         <hr className="divider" />
         <button className="btn-ghost" onClick={handleDelete} disabled={deleting}
@@ -172,11 +172,42 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
 
-function RecipeChat({ recipe }: { recipe: Recipe }) {
+function RecipeChat({ recipe, onUpdate }: { recipe: Recipe; onUpdate: (updated: Recipe) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [applying, setApplying] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  async function applyChanges() {
+    setApplying(true)
+    const res = await fetch('/api/recipe-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipe,
+        message: 'Based on our conversation, give me the complete updated recipe. Return ONLY a JSON object with fields: title, description, ingredients, instructions, prep_time, cook_time, servings, tags, toddler_notes. No other text.',
+        history: messages.map(m => ({ role: m.role, content: m.content })),
+      }),
+    })
+    const data = await res.json()
+    try {
+      const match = data.reply?.match(/\{[\s\S]*\}/)
+      if (match) {
+        const updated = JSON.parse(match[0])
+        const newRecipe = { ...recipe, ...updated }
+        // Persist to DB
+        await fetch('/api/recipes', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: recipe.id, ...updated }),
+        })
+        onUpdate(newRecipe)
+        setMessages(prev => [...prev, { role: 'assistant', content: '✓ Recipe updated and saved!' }])
+      }
+    } catch { /* ignore */ }
+    setApplying(false)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -200,7 +231,7 @@ function RecipeChat({ recipe }: { recipe: Recipe }) {
     setThinking(false)
   }
 
-  const SUGGESTIONS = ['Any substitutions I should know about?', 'How do I know when it\'s done?', 'Can I make this ahead?']
+  const SUGGESTIONS = ['Any substitutions?', 'How do I know when it\'s done?', 'Change the name to…', 'Can I make this ahead?']
 
   return (
     <div>
@@ -244,12 +275,21 @@ function RecipeChat({ recipe }: { recipe: Recipe }) {
         </div>
       )}
 
+      {messages.some(m => m.role === 'assistant') && (
+        <div style={{ marginBottom: '0.5rem' }}>
+          <button className="btn-secondary" onClick={applyChanges} disabled={applying || thinking}
+            style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}>
+            {applying ? <><Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</> : '✦ Save changes to recipe'}
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <input className="input"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Substitutions, technique, variations…"
+          placeholder="Ask anything, or say 'rename this to…'"
           style={{ flex: 1, fontSize: '0.85rem' }}
         />
         <button className="btn-primary" onClick={send} disabled={thinking || !input.trim()}
@@ -383,7 +423,10 @@ export default function RecipesPage() {
           recipe={selected}
           onClose={() => setSelected(null)}
           onDelete={() => handleDelete(selected.id)}
-          onRefresh={(updated) => { setSelected(updated); setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r)) }}
+          onRefresh={(updated) => {
+            setSelected(updated)
+            setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r))
+          }}
         />
       )}
 

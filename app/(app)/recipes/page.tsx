@@ -64,6 +64,26 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
   const originalServings = recipe.servings ?? 4
   const scale = servings / originalServings
   const isEmpty = recipe.ingredients.length === 0 && recipe.source_url
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(recipe.title)
+  const [editDesc, setEditDesc] = useState(recipe.description || '')
+  const [editIngredients, setEditIngredients] = useState(recipe.ingredients.join('\n'))
+  const [editInstructions, setEditInstructions] = useState(recipe.instructions.join('\n'))
+  const [saving, setSaving] = useState(false)
+
+  async function saveEdits() {
+    setSaving(true)
+    const ingredients = editIngredients.split('\n').map(s => s.trim()).filter(Boolean)
+    const instructions = editInstructions.split('\n').map(s => s.trim()).filter(Boolean)
+    await fetch('/api/recipes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: recipe.id, title: editTitle, description: editDesc, ingredients, instructions, tags: recipe.tags, prep_time: recipe.prep_time, cook_time: recipe.cook_time, servings: recipe.servings }),
+    })
+    onRefresh({ ...recipe, title: editTitle, description: editDesc, ingredients, instructions })
+    setEditing(false)
+    setSaving(false)
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -97,8 +117,45 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
               {recipe.tags.map(t => <span key={t} className="tag">{t}</span>)}
             </div>
           </div>
-          <button className="btn-ghost" onClick={onClose}><X size={16} /></button>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button className="btn-ghost" onClick={() => setEditing(e => !e)} style={{ fontSize: '0.78rem' }}>
+              {editing ? 'Cancel' : '✎ Edit'}
+            </button>
+            <button className="btn-ghost" onClick={onClose}><X size={16} /></button>
+          </div>
         </div>
+
+        {editing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <div className="section-label" style={{ marginBottom: '0.4rem' }}>Title</div>
+              <input className="input" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+            </div>
+            <div>
+              <div className="section-label" style={{ marginBottom: '0.4rem' }}>Description</div>
+              <input className="input" value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="One sentence description" />
+            </div>
+            {recipe.ingredients.length > 0 && (
+              <>
+                <div>
+                  <div className="section-label" style={{ marginBottom: '0.4rem' }}>Ingredients <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(one per line)</span></div>
+                  <textarea className="textarea" value={editIngredients} onChange={e => setEditIngredients(e.target.value)} style={{ minHeight: '120px' }} />
+                </div>
+                <div>
+                  <div className="section-label" style={{ marginBottom: '0.4rem' }}>Instructions <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(one per line)</span></div>
+                  <textarea className="textarea" value={editInstructions} onChange={e => setEditInstructions(e.target.value)} style={{ minHeight: '120px' }} />
+                </div>
+              </>
+            )}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn-primary" onClick={saveEdits} disabled={saving} style={{ fontSize: '0.85rem' }}>
+                {saving ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</> : 'Save changes'}
+              </button>
+              <button className="btn-secondary" onClick={() => setEditing(false)} style={{ fontSize: '0.85rem' }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+        <>
 
         {recipe.description && (
           <p style={{ color: 'var(--ink-light)', fontSize: '0.9rem', lineHeight: 1.6 }}>{recipe.description}</p>
@@ -154,10 +211,12 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
           </ol>
         </div>
 
+        </>
+        )}
+
         <hr className="divider" />
 
-        {/* Recipe chat */}
-        <RecipeChat recipe={recipe} onUpdate={(updated) => onRefresh(updated)} />
+        {!editing && <RecipeChat recipe={recipe} onUpdate={(updated) => onRefresh(updated)} />}
 
         <hr className="divider" />
         <button className="btn-ghost" onClick={handleDelete} disabled={deleting}

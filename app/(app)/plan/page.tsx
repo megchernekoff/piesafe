@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { ChefHat, Loader2, ShoppingCart, ClipboardList, Calendar, X, Send, BookmarkPlus, Check, Camera } from 'lucide-react'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Dinner {
   title: string
@@ -548,6 +551,39 @@ function PlanChat({ plan, onRegenerate, onPlanUpdate }: { plan: Plan; onRegenera
   )
 }
 
+function SortableDayCell({ day, onClick }: { day: DayPlan; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: day.day })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: isDragging ? 'grabbing' : day.dinner ? 'pointer' : 'default',
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="day-cell"
+      onClick={!isDragging ? onClick : undefined}
+      {...attributes} {...listeners}>
+      <div className="day-label">{day.day}</div>
+      {day.dinner ? (
+        <>
+          <div className="day-meal-title">{day.dinner.title}</div>
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            {day.dinner.tags?.slice(0, 2).map(t => <span key={t} className="tag">{t}</span>)}
+          </div>
+          {day.dinner.toddler_notes && (
+            <div className="toddler-badge" style={{ marginTop: 'auto', display: 'inline-flex' }}>toddler ✓</div>
+          )}
+          <div style={{ marginTop: 'auto', fontSize: '0.72rem', color: 'var(--ink-light)' }}>
+            {(day.dinner.prep_time || 0) + (day.dinner.cook_time || 0)}m total
+          </div>
+        </>
+      ) : (
+        <div style={{ color: 'var(--ink-light)', fontSize: '0.82rem', marginTop: 'auto' }}>Rest day</div>
+      )}
+    </div>
+  )
+}
+
 const CATEGORY_ORDER = ['produce', 'protein', 'dairy', 'pantry', 'other']
 
 function GroceryView({ plan, onPlanUpdate }: { plan: Plan; onPlanUpdate: (p: Plan) => void }) {
@@ -663,6 +699,27 @@ export default function PlanPage() {
   const [view, setView] = useState<'plan' | 'grocery' | 'prep'>(initialTab)
   const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null)
   const [, setChecked] = useState<Set<string>>(new Set())
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id || !plan) return
+    const oldIndex = plan.days.findIndex(d => d.day === active.id)
+    const newIndex = plan.days.findIndex(d => d.day === over.id)
+    const reordered = arrayMove(plan.days, oldIndex, newIndex).map((d, i) => ({ ...d, day: `Day ${i + 1}` }))
+    const newPlan = { ...plan, days: reordered }
+    setPlan(newPlan)
+    // Persist reordered days to DB
+    if (plan.id) {
+      for (let i = 0; i < reordered.length; i++) {
+        await fetch('/api/meal-plan/swap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planId: plan.id, dayName: `Day ${i + 1}`, prebuiltDinner: reordered[i].dinner }),
+        })
+      }
+    }
+  }
 
   // Persist nights and tweaks across navigation
   const updateNights = (n: number) => { setNights(n); localStorage.setItem('plan-nights', String(n)) }
@@ -751,7 +808,7 @@ export default function PlanPage() {
         <div style={{ flex: 1, minWidth: '240px' }}>
           <div className="section-label">Special requests (optional)</div>
           <input className="input"
-            placeholder="e.g. one Thai night, nothing too heavy, use up the feta…"
+            placeholder="e.g. salmon on Day 1, spaghetti Day 3 — fill in the rest. Or: one Thai night, nothing too heavy…"
             value={tweaks}
             onChange={e => updateTweaks(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && generate()}
@@ -804,31 +861,15 @@ export default function PlanPage() {
           )}
 
           {view === 'plan' && (
-            <div className="plan-grid">
-              {plan.days.map(day => (
-                <div key={day.day} className="day-cell"
-                  onClick={() => day.dinner && setSelectedDay(day)}
-                  style={{ cursor: day.dinner ? 'pointer' : 'default' }}>
-                  <div className="day-label">{day.day}</div>
-                  {day.dinner ? (
-                    <>
-                      <div className="day-meal-title">{day.dinner.title}</div>
-                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                        {day.dinner.tags?.slice(0, 2).map(t => <span key={t} className="tag">{t}</span>)}
-                      </div>
-                      {day.dinner.toddler_notes && (
-                        <div className="toddler-badge" style={{ marginTop: 'auto', display: 'inline-flex' }}>toddler ✓</div>
-                      )}
-                      <div style={{ marginTop: 'auto', fontSize: '0.72rem', color: 'var(--ink-light)' }}>
-                        {(day.dinner.prep_time || 0) + (day.dinner.cook_time || 0)}m total
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ color: 'var(--ink-light)', fontSize: '0.82rem', marginTop: 'auto' }}>Rest day</div>
-                  )}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={plan.days.map(d => d.day)} strategy={horizontalListSortingStrategy}>
+                <div className="plan-grid">
+                  {plan.days.map(day => (
+                    <SortableDayCell key={day.day} day={day} onClick={() => day.dinner && setSelectedDay(day)} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
 
           {view === 'grocery' && (

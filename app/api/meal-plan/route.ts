@@ -114,7 +114,9 @@ export async function POST(req: NextRequest) {
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
 ${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
-${tweaks ? `Special requests: ${tweaks}` : ''}${savedRecipesBlock}
+${tweaks ? `Special requests and pre-planned meals: ${tweaks}
+
+IMPORTANT: If the user mentions they are already planning specific meals (e.g. "I'm doing salmon tonight", "we have spaghetti on Thursday"), treat those as FIXED entries for those days — do not change them, just fill in the remaining days with new suggestions.` : ''}${savedRecipesBlock}
 
 Days: ${Array.from({ length: nights }, (_, i) => `Day ${i + 1}`).join(', ')}.
 

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Pie Safe",
   "description": "Save any recipe to your Pie Safe recipe box in one click.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -13,7 +13,6 @@
   },
   "permissions": [
     "activeTab",
-    "cookies",
     "scripting",
     "contextMenus"
   ],

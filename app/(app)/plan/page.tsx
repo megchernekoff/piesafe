@@ -693,6 +693,7 @@ export default function PlanPage() {
   })
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
+  const [generateError, setGenerateError] = useState('')
   const initialTab = typeof window !== 'undefined'
     ? (new URLSearchParams(window.location.search).get('tab') as 'plan' | 'grocery' | 'prep' | null) ?? 'plan'
     : 'plan'
@@ -748,10 +749,19 @@ export default function PlanPage() {
         body: JSON.stringify({ tweaks: combinedTweaks, nights }),
       })
       const data = await res.json()
-      if (data.error) { console.error('Generate error:', data.error); return }
+      if (data.error) {
+        setGenerateError(data.error)
+        return
+      }
+      if (!data.id || !data.days) {
+        setGenerateError('Unexpected response from server — try again.')
+        return
+      }
+      setGenerateError('')
       setPlan(data)
       setChecked(new Set())
     } catch (e) {
+      setGenerateError('Something went wrong. Check your connection and try again.')
       console.error('Generate failed:', e)
     } finally {
       setLoading(false)
@@ -821,7 +831,13 @@ export default function PlanPage() {
         </button>
       </div>
 
-      {!plan && !loading && (
+      {generateError && !loading && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '0.9rem 1.1rem', marginBottom: '1rem', fontSize: '0.875rem', color: '#b91c1c' }}>
+          ⚠ {generateError}
+        </div>
+      )}
+
+      {!plan && !loading && !generateError && (
         <div className="empty-state">
           <ChefHat size={40} />
           <h3>No plan yet</h3>

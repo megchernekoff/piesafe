@@ -26,7 +26,7 @@ export default function LandingPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/plan')
+    if (isLoaded && isSignedIn) router.replace('/dashboard')
   }, [isLoaded, isSignedIn, router])
 
   const [dietary, setDietary] = useState<string[]>([])

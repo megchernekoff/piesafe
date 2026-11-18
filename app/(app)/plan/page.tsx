@@ -687,10 +687,7 @@ export default function PlanPage() {
     if (typeof window === 'undefined') return 7
     return parseInt(localStorage.getItem('plan-nights') || '7')
   })
-  const [tweaks, setTweaks] = useState<string>(() => {
-    if (typeof window === 'undefined') return ''
-    return localStorage.getItem('plan-tweaks') || ''
-  })
+  const [tweaks, setTweaks] = useState<string>('')  // never persisted — start fresh each session
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
   const [generateError, setGenerateError] = useState('')
@@ -724,7 +721,7 @@ export default function PlanPage() {
 
   // Persist nights and tweaks across navigation
   const updateNights = (n: number) => { setNights(n); localStorage.setItem('plan-nights', String(n)) }
-  const updateTweaks = (t: string) => { setTweaks(t); localStorage.setItem('plan-tweaks', t) }
+  const updateTweaks = (t: string) => { setTweaks(t) }
 
   useEffect(() => {
     // Load most recent plan on initial mount, regardless of weekStart
@@ -806,30 +803,44 @@ export default function PlanPage() {
         <p className="page-subtitle">Your weekly dinner plan</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
-        <div>
-          <div className="section-label">Nights</div>
-          <div style={{ display: 'flex', gap: '0.35rem' }}>
-            {[1,2,3,4,5,6,7].map(n => (
-              <button key={n} type="button"
-                onClick={() => updateNights(n)}
-                className={nights === n ? 'btn-primary' : 'btn-secondary'}
-                style={{ minWidth: '36px', padding: '0.45rem 0.5rem', fontSize: '0.875rem' }}>
-                {n}
-              </button>
-            ))}
+      {/* Last plan summary */}
+      {plan && (
+        <div style={{ marginBottom: '1.25rem', padding: '0.65rem 1rem', background: 'var(--parchment)', borderRadius: 8, border: '1px solid var(--stone-dark)', fontSize: '0.82rem', color: 'var(--ink-light)' }}>
+          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Last plan:</span>{' '}
+          {plan.days.filter(d => d.dinner).map(d => d.dinner!.title).join(' · ')}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+        {/* Nights counter */}
+        <div style={{ flexShrink: 0 }}>
+          <div className="section-label" style={{ marginBottom: '0.5rem' }}>Nights</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: '1px solid var(--stone-dark)', borderRadius: 8, overflow: 'hidden', background: 'var(--parchment)' }}>
+            <button type="button" onClick={() => updateNights(Math.max(1, nights - 1))}
+              style={{ padding: '0.55rem 0.85rem', background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink-light)' }}>−</button>
+            <span style={{ padding: '0 0.75rem', fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)', minWidth: '2rem', textAlign: 'center' }}>{nights}</span>
+            <button type="button" onClick={() => updateNights(Math.min(7, nights + 1))}
+              style={{ padding: '0.55rem 0.85rem', background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink-light)' }}>+</button>
           </div>
         </div>
+
+        {/* Auto-expanding textarea */}
         <div style={{ flex: 1, minWidth: '240px' }}>
-          <div className="section-label">Special requests (optional)</div>
-          <input className="input"
-            placeholder="e.g. salmon on Day 1, spaghetti Day 3 — fill in the rest. Or: one Thai night, nothing too heavy…"
+          <div className="section-label" style={{ marginBottom: '0.5rem' }}>What are you thinking? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></div>
+          <textarea className="textarea"
+            placeholder={'Tell me what you\'re already planning, what you\'re craving, or leave blank to surprise me.\n\ne.g. "salmon tonight, spaghetti tomorrow — fill in the rest" or "nothing too heavy this week"'}
             value={tweaks}
-            onChange={e => updateTweaks(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && generate()}
+            onChange={e => {
+              updateTweaks(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
+            style={{ minHeight: '72px', resize: 'none', overflow: 'hidden' }}
           />
         </div>
-        <button className="btn-primary" onClick={() => generate()} disabled={loading}>
+
+        <button className="btn-primary" onClick={() => generate()} disabled={loading}
+          style={{ alignSelf: 'flex-end', flexShrink: 0 }}>
           {loading
             ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Generating…</>
             : <><ChefHat size={14} /> Generate Plan</>}

@@ -786,6 +786,7 @@ export default function PlanPage() {
 
   async function generate(extraTweaks?: string) {
     setLoading(true)
+    setGenerateError('')
     try {
       const combinedTweaks = [tweaks, extraTweaks].filter(Boolean).join('\n')
       const res = await fetch('/api/meal-plan', {
@@ -793,25 +794,45 @@ export default function PlanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tweaks: combinedTweaks, nights, pinnedRecipes, placeholderMeals }),
       })
+
       if (!res.ok) {
         const text = await res.text()
         setGenerateError(`Server error ${res.status}: ${text.slice(0, 200)}`)
         return
       }
-      const data = await res.json()
-      if (data.error) {
-        setGenerateError(data.error)
+
+      // Read streaming response
+      const reader = res.body?.getReader()
+      if (!reader) { setGenerateError('No response stream'); return }
+
+      let fullText = ''
+      const dec = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        fullText += dec.decode(value, { stream: true })
+      }
+
+      // Check for error signal
+      if (fullText.includes('__ERROR__')) {
+        const errMsg = fullText.split('__ERROR__')[1] || 'Generation failed'
+        setGenerateError(errMsg)
         return
       }
-      if (!data.id || !data.days) {
-        setGenerateError('Unexpected response — try again.')
-        return
+
+      // Extract plan ID and re-fetch the saved plan
+      const planIdMatch = fullText.match(/__PLAN_ID__([^\s]+)/)
+      if (!planIdMatch) { setGenerateError('Plan saved but could not load — refresh the page.'); return }
+
+      const freshRes = await fetch('/api/meal-plan')
+      const data = await freshRes.json()
+      if (data) {
+        setGenerateError('')
+        setPlan(data)
+        setChecked(new Set())
       }
-      setGenerateError('')
-      setPlan(data)
-      setChecked(new Set())
     } catch (e) {
-      setGenerateError('Something went wrong. Check your connection and try again.')
+      setGenerateError('Something went wrong — try again.')
       console.error('Generate failed:', e)
     } finally {
       setLoading(false)

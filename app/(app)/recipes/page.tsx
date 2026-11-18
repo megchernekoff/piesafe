@@ -218,6 +218,25 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
 
         {!editing && <RecipeChat recipe={recipe} onUpdate={(updated) => onRefresh(updated)} />}
 
+        {recipe.source_url && recipe.ingredients.length > 0 && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--ink-light)', lineHeight: 1.6, padding: '0.6rem 0.75rem', background: 'var(--parchment)', borderRadius: 8, border: '1px solid var(--stone-dark)' }}>
+            Adapted from{' '}
+            <a href={recipe.source_url} target="_blank" rel="noopener"
+              style={{ color: 'var(--lavender)', textDecoration: 'underline' }}>
+              {(() => {
+                try {
+                  const u = new URL(recipe.source_url!)
+                  const slug = u.pathname.split('/').filter(Boolean).pop() || ''
+                  const name = /^\d+$/.test(slug)
+                    ? u.hostname.replace('www.', '')
+                    : slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                  return name || u.hostname.replace('www.', '')
+                } catch { return recipe.source_url }
+              })()}
+            </a>
+          </div>
+        )}
+
         <hr className="divider" />
         <button className="btn-ghost" onClick={handleDelete} disabled={deleting}
           style={{ color: 'var(--terracotta)', alignSelf: 'flex-start' }}>

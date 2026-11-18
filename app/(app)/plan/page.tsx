@@ -851,12 +851,13 @@ export default function PlanPage() {
         <p className="page-subtitle">Your weekly dinner plan</p>
       </div>
 
-      {/* Pinned recipes */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div className="section-label" style={{ marginBottom: '0.5rem' }}>Pin recipes from your box</div>
-        <div style={{ position: 'relative', maxWidth: '360px' }}>
+      {/* Row 1: Pin search + Nights side by side */}
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Pin search */}
+        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+          <div className="section-label" style={{ marginBottom: '0.5rem' }}>Pin a recipe or meal</div>
           <input ref={pinRef} className="input"
-            placeholder="Search saved recipes…"
+            placeholder="Search your box, or type any meal name…"
             value={pinSearch}
             onChange={e => { setPinSearch(e.target.value); setShowPinDropdown(true) }}
             onFocus={() => setShowPinDropdown(true)}
@@ -868,10 +869,10 @@ export default function PlanPage() {
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--parchment)', border: '1px solid var(--stone-dark)', borderRadius: 8, boxShadow: '0 4px 16px rgba(44,30,16,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
               {savedRecipes
                 .filter(r => r.title.toLowerCase().includes(pinSearch.toLowerCase()) && !pinnedRecipes.find(p => p.id === r.id))
-                .slice(0, 6)
+                .slice(0, 5)
                 .map(r => (
                   <button key={r.id} onMouseDown={() => { setPinnedRecipes(prev => [...prev, r]); setPinSearch(''); setShowPinDropdown(false) }}
-                    style={{ display: 'block', width: '100%', padding: '0.6rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif' }}
+                    style={{ display: 'block', width: '100%', padding: '0.55rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
                     {r.title}
@@ -879,7 +880,7 @@ export default function PlanPage() {
                 ))}
               {savedRecipes.filter(r => r.title.toLowerCase().includes(pinSearch.toLowerCase()) && !pinnedRecipes.find(p => p.id === r.id)).length === 0 && (
                 <button onMouseDown={addPlaceholder}
-                  style={{ display: 'block', width: '100%', padding: '0.6rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif', color: 'var(--ochre)' }}
+                  style={{ display: 'block', width: '100%', padding: '0.55rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif', color: 'var(--ochre)' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
                   + Add &ldquo;{pinSearch}&rdquo; as a placeholder
@@ -888,39 +889,11 @@ export default function PlanPage() {
             </div>
           )}
         </div>
-        {(pinnedRecipes.length > 0 || placeholderMeals.length > 0) && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.6rem' }}>
-            {pinnedRecipes.map(r => (
-              <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--lavender)', color: 'var(--parchment)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
-                {r.title}
-                <button onClick={() => setPinnedRecipes(prev => prev.filter(p => p.id !== r.id))}
-                  style={{ background: 'none', border: 'none', color: 'rgba(253,246,232,0.7)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>×</button>
-              </span>
-            ))}
-            {placeholderMeals.map(name => (
-              <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'transparent', color: 'var(--ochre)', border: '1px dashed var(--ochre)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
-                {name}
-                <button onClick={() => setPlaceholderMeals(prev => prev.filter(m => m !== name))}
-                  style={{ background: 'none', border: 'none', color: 'var(--ochre)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0, opacity: 0.6 }}>×</button>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Last plan summary */}
-      {plan && (
-        <div style={{ marginBottom: '1.25rem', padding: '0.65rem 1rem', background: 'var(--parchment)', borderRadius: 8, border: '1px solid var(--stone-dark)', fontSize: '0.82rem', color: 'var(--ink-light)' }}>
-          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Last plan:</span>{' '}
-          {plan.days.filter(d => d.dinner).map(d => d.dinner!.title).join(' · ')}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
         {/* Nights counter */}
         <div style={{ flexShrink: 0 }}>
           <div className="section-label" style={{ marginBottom: '0.5rem' }}>Nights</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: '1px solid var(--stone-dark)', borderRadius: 8, overflow: 'hidden', background: 'var(--parchment)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--stone-dark)', borderRadius: 8, overflow: 'hidden', background: 'var(--parchment)' }}>
             <button type="button" onClick={() => updateNights(Math.max(1, nights - 1))}
               style={{ padding: '0.55rem 0.85rem', background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink-light)' }}>−</button>
             <span style={{ padding: '0 0.75rem', fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)', minWidth: '2rem', textAlign: 'center' }}>{nights}</span>
@@ -928,29 +901,52 @@ export default function PlanPage() {
               style={{ padding: '0.55rem 0.85rem', background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink-light)' }}>+</button>
           </div>
         </div>
+      </div>
 
-        {/* Auto-expanding textarea */}
-        <div style={{ flex: 1, minWidth: '240px' }}>
-          <div className="section-label" style={{ marginBottom: '0.5rem' }}>What are you thinking? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></div>
-          <textarea className="textarea"
-            placeholder={'Tell me what you\'re already planning, what you\'re craving, or leave blank to surprise me.\n\ne.g. "salmon tonight, spaghetti tomorrow — fill in the rest" or "nothing too heavy this week"'}
-            value={tweaks}
-            onChange={e => {
-              updateTweaks(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
-            }}
-            style={{ minHeight: '72px', resize: 'none', overflow: 'hidden' }}
-          />
+      {/* Pinned pills */}
+      {(pinnedRecipes.length > 0 || placeholderMeals.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
+          {pinnedRecipes.map(r => (
+            <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--lavender)', color: 'var(--parchment)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
+              {r.title}
+              <button onClick={() => setPinnedRecipes(prev => prev.filter(p => p.id !== r.id))}
+                style={{ background: 'none', border: 'none', color: 'rgba(253,246,232,0.7)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>×</button>
+            </span>
+          ))}
+          {placeholderMeals.map(name => (
+            <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'transparent', color: 'var(--ochre)', border: '1px dashed var(--ochre)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
+              {name}
+              <button onClick={() => setPlaceholderMeals(prev => prev.filter(m => m !== name))}
+                style={{ background: 'none', border: 'none', color: 'var(--ochre)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0, opacity: 0.6 }}>×</button>
+            </span>
+          ))}
         </div>
+      )}
 
-        <button className="btn-primary" onClick={() => generate()} disabled={loading}
-          style={{ alignSelf: 'flex-end', flexShrink: 0 }}>
-          {loading
-            ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Generating…</>
-            : <><ChefHat size={14} /> Generate Plan</>}
+      {/* Row 2: Textarea + Generate */}
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '0.6rem' }}>
+        <textarea className="textarea"
+          placeholder={'Anything else? "nothing too heavy", "use up the pork", or leave blank…'}
+          value={tweaks}
+          onChange={e => {
+            updateTweaks(e.target.value)
+            e.target.style.height = 'auto'
+            e.target.style.height = e.target.scrollHeight + 'px'
+          }}
+          style={{ flex: 1, minHeight: '44px', resize: 'none', overflow: 'hidden' }}
+        />
+        <button className="btn-primary" onClick={() => generate()} disabled={loading} style={{ flexShrink: 0, alignSelf: 'flex-end' }}>
+          {loading ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Generating…</> : <><ChefHat size={14} /> Generate Plan</>}
         </button>
       </div>
+
+      {/* Last plan — quiet, under the controls */}
+      {plan && (
+        <div style={{ marginBottom: '1.75rem', fontSize: '0.78rem', color: 'var(--ink-light)' }}>
+          <span style={{ fontWeight: 600 }}>Last:</span>{' '}
+          {plan.days.filter(d => d.dinner).map(d => d.dinner!.title).join(' · ')}
+        </div>
+      )}
 
       {generateError && !loading && (
         <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '0.9rem 1.1rem', marginBottom: '1rem', fontSize: '0.875rem', color: '#b91c1c' }}>

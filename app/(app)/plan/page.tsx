@@ -748,13 +748,18 @@ export default function PlanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tweaks: combinedTweaks, nights }),
       })
+      if (!res.ok) {
+        const text = await res.text()
+        setGenerateError(`Server error ${res.status}: ${text.slice(0, 200)}`)
+        return
+      }
       const data = await res.json()
       if (data.error) {
         setGenerateError(data.error)
         return
       }
       if (!data.id || !data.days) {
-        setGenerateError('Unexpected response from server — try again.')
+        setGenerateError('Unexpected response — try again.')
         return
       }
       setGenerateError('')

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tweaks, nights = 7, pinnedRecipes = [] } = await req.json()
+  const { tweaks, nights = 7, pinnedRecipes = [], placeholderMeals = [] } = await req.json()
 
   const [profileResult, recipesResult] = await Promise.all([
     db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] }),
@@ -106,6 +106,10 @@ export async function POST(req: NextRequest) {
       cook_time: r.cook_time as number | null,
     }))
 
+  const placeholderBlock = (placeholderMeals as string[]).length > 0
+    ? `\nPLACEHOLDER MEALS — include these by name on a day each. Give them a brief description but set ingredients to [] and instructions to [] since the user just wants the name on the plan:\n${(placeholderMeals as string[]).map(m => `- ${m}`).join('\n')}\n`
+    : ''
+
   const pinnedBlock = pinnedRecipes.length > 0
     ? `\nPINNED RECIPES — these MUST appear in the plan exactly as given, using their exact ingredients and instructions:\n${(pinnedRecipes as { title: string; description: string; ingredients: string[]; instructions: string[] }[]).map(r =>
         `- ${r.title}: ${r.description || ''}\n  Ingredients: ${r.ingredients.slice(0, 5).join(', ')}...`
@@ -120,7 +124,7 @@ export async function POST(req: NextRequest) {
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
 ${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
-${pinnedBlock}${tweaks ? `Special requests and pre-planned meals: ${tweaks}
+${placeholderBlock}${pinnedBlock}${tweaks ? `Special requests and pre-planned meals: ${tweaks}
 
 IMPORTANT: If the user mentions they are already planning specific meals (e.g. "I'm doing salmon tonight", "we have spaghetti on Thursday"), treat those as FIXED entries for those days — do not change them, just fill in the remaining days with new suggestions.` : ''}${savedRecipesBlock}
 

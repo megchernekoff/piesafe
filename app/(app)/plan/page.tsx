@@ -345,9 +345,32 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
         )}
 
         {(!d.ingredients || d.ingredients.length === 0) ? (
-          <div style={{ background: 'var(--lavender-soft)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.85rem', color: 'var(--lavender)', lineHeight: 1.6 }}>
-            This recipe was saved as a link only — no ingredients are stored yet.
-            Upload a screenshot below to add the full recipe, or use <strong>↺ Suggest something different</strong> to generate a similar one.
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
+              Just a placeholder — no recipe yet.
+            </p>
+            <button className="btn-secondary" onClick={async () => {
+              setSaving(true)
+              const res = await fetch('/api/recipes/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: d.title }),
+              })
+              const data = await res.json()
+              if (data.recipe) {
+                const updated = { ...d, ...data.recipe }
+                setCurrentDinner(updated)
+                onDinnerUpdate(updated)
+                await fetch('/api/meal-plan/swap', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ planId, dayName: day.day, prebuiltDinner: updated }),
+                })
+              }
+              setSaving(false)
+            }} disabled={saving} style={{ fontSize: '0.82rem', alignSelf: 'flex-start' }}>
+              {saving ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Generating…</> : '✦ Get recipe for this'}
+            </button>
           </div>
         ) : (
           <>
@@ -691,12 +714,21 @@ export default function PlanPage() {
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Pinned recipes
+  // Pinned recipes + placeholder meals
   const [savedRecipes, setSavedRecipes] = useState<{ id: string; title: string; description: string; ingredients: string[]; instructions: string[]; tags: string[] }[]>([])
   const [pinnedRecipes, setPinnedRecipes] = useState<typeof savedRecipes>([])
+  const [placeholderMeals, setPlaceholderMeals] = useState<string[]>([])
   const [pinSearch, setPinSearch] = useState('')
   const [showPinDropdown, setShowPinDropdown] = useState(false)
   const pinRef = useRef<HTMLInputElement>(null)
+
+  function addPlaceholder() {
+    const name = pinSearch.trim()
+    if (!name || placeholderMeals.includes(name)) return
+    setPlaceholderMeals(prev => [...prev, name])
+    setPinSearch('')
+    setShowPinDropdown(false)
+  }
 
   useEffect(() => {
     fetch('/api/recipes')
@@ -759,7 +791,7 @@ export default function PlanPage() {
       const res = await fetch('/api/meal-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tweaks: combinedTweaks, nights, pinnedRecipes }),
+        body: JSON.stringify({ tweaks: combinedTweaks, nights, pinnedRecipes, placeholderMeals }),
       })
       if (!res.ok) {
         const text = await res.text()
@@ -829,6 +861,7 @@ export default function PlanPage() {
             onChange={e => { setPinSearch(e.target.value); setShowPinDropdown(true) }}
             onFocus={() => setShowPinDropdown(true)}
             onBlur={() => setTimeout(() => setShowPinDropdown(false), 150)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addPlaceholder() } }}
             style={{ fontSize: '0.875rem' }}
           />
           {showPinDropdown && pinSearch.trim() && (
@@ -845,18 +878,30 @@ export default function PlanPage() {
                   </button>
                 ))}
               {savedRecipes.filter(r => r.title.toLowerCase().includes(pinSearch.toLowerCase()) && !pinnedRecipes.find(p => p.id === r.id)).length === 0 && (
-                <div style={{ padding: '0.6rem 1rem', fontSize: '0.85rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>No matches</div>
+                <button onMouseDown={addPlaceholder}
+                  style={{ display: 'block', width: '100%', padding: '0.6rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif', color: 'var(--ochre)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  + Add &ldquo;{pinSearch}&rdquo; as a placeholder
+                </button>
               )}
             </div>
           )}
         </div>
-        {pinnedRecipes.length > 0 && (
+        {(pinnedRecipes.length > 0 || placeholderMeals.length > 0) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.6rem' }}>
             {pinnedRecipes.map(r => (
               <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--lavender)', color: 'var(--parchment)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
                 {r.title}
                 <button onClick={() => setPinnedRecipes(prev => prev.filter(p => p.id !== r.id))}
                   style={{ background: 'none', border: 'none', color: 'rgba(253,246,232,0.7)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>×</button>
+              </span>
+            ))}
+            {placeholderMeals.map(name => (
+              <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'transparent', color: 'var(--ochre)', border: '1px dashed var(--ochre)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
+                {name}
+                <button onClick={() => setPlaceholderMeals(prev => prev.filter(m => m !== name))}
+                  style={{ background: 'none', border: 'none', color: 'var(--ochre)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0, opacity: 0.6 }}>×</button>
               </span>
             ))}
           </div>

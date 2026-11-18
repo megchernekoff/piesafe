@@ -32,9 +32,10 @@ export default function ExtensionBanner() {
       <Puzzle size={16} style={{ color: 'var(--lavender)', flexShrink: 0 }} />
       <div style={{ flex: 1, fontSize: '0.875rem', lineHeight: 1.5 }}>
         <strong>Save recipes from anywhere</strong> — install the Pie Safe Chrome extension to add any recipe to your box in one click.{' '}
-        <Link href="/extension" style={{ color: 'var(--lavender)', textDecoration: 'underline' }}>
-          How to install →
-        </Link>
+        <a href="https://chromewebstore.google.com/detail/pie-safe/gmlfjbhjimpojkadhckonigmlappjjmb"
+          target="_blank" rel="noopener" style={{ color: 'var(--lavender)', textDecoration: 'underline' }}>
+          Add to Chrome →
+        </a>
       </div>
       <button onClick={dismiss} className="btn-ghost" style={{ padding: '0.2rem', flexShrink: 0, opacity: 0.5 }}>
         <X size={14} />

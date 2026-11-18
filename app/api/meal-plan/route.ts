@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tweaks, nights = 7 } = await req.json()
+  const { tweaks, nights = 7, pinnedRecipes = [] } = await req.json()
 
   const [profileResult, recipesResult] = await Promise.all([
     db.execute({ sql: 'SELECT * FROM profiles WHERE user_id = ?', args: [userId] }),
@@ -106,6 +106,12 @@ export async function POST(req: NextRequest) {
       cook_time: r.cook_time as number | null,
     }))
 
+  const pinnedBlock = pinnedRecipes.length > 0
+    ? `\nPINNED RECIPES — these MUST appear in the plan exactly as given, using their exact ingredients and instructions:\n${(pinnedRecipes as { title: string; description: string; ingredients: string[]; instructions: string[] }[]).map(r =>
+        `- ${r.title}: ${r.description || ''}\n  Ingredients: ${r.ingredients.slice(0, 5).join(', ')}...`
+      ).join('\n')}\n`
+    : ''
+
   const savedRecipesBlock = savedRecipes.length > 0
     ? `\nThe user has these saved recipes — include at most 2 if they fit well, fill the rest with fresh suggestions:\n${savedRecipes.map(r => `- ${r.title}${r.description ? `: ${r.description}` : ''}`).join('\n')}\nThe majority of meals should be new creative suggestions.\n`
     : ''
@@ -114,7 +120,7 @@ export async function POST(req: NextRequest) {
 ${dietary.length ? `Dietary restrictions: ${dietary.join(', ')}.` : ''}
 ${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? `Include toddler_notes for a ${toddlerAge ? `${toddlerAge}-month-old` : 'young child'} for each meal.` : ''}
-${tweaks ? `Special requests and pre-planned meals: ${tweaks}
+${pinnedBlock}${tweaks ? `Special requests and pre-planned meals: ${tweaks}
 
 IMPORTANT: If the user mentions they are already planning specific meals (e.g. "I'm doing salmon tonight", "we have spaghetti on Thursday"), treat those as FIXED entries for those days — do not change them, just fill in the remaining days with new suggestions.` : ''}${savedRecipesBlock}
 
@@ -129,11 +135,17 @@ Return JSON. Be concise:
 }
 Return only valid JSON, no markdown.`
 
-  const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 8000,
-    messages: [{ role: 'user', content: prompt }],
-  })
+  let message
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: prompt }],
+    })
+  } catch (err) {
+    console.error('Anthropic API error:', err)
+    return NextResponse.json({ error: `AI error: ${String(err).slice(0, 200)}` }, { status: 500 })
+  }
 
   const rawText = (message.content[0] as { text: string }).text
   let plan: { rationale?: string; days: { day: string; dinner: unknown }[]; grocery_list: unknown[]; prep_notes: unknown[] }

@@ -687,9 +687,25 @@ export default function PlanPage() {
     if (typeof window === 'undefined') return 7
     return parseInt(localStorage.getItem('plan-nights') || '7')
   })
-  const [tweaks, setTweaks] = useState<string>('')  // never persisted — start fresh each session
+  const [tweaks, setTweaks] = useState<string>('')
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Pinned recipes
+  const [savedRecipes, setSavedRecipes] = useState<{ id: string; title: string; description: string; ingredients: string[]; instructions: string[]; tags: string[] }[]>([])
+  const [pinnedRecipes, setPinnedRecipes] = useState<typeof savedRecipes>([])
+  const [pinSearch, setPinSearch] = useState('')
+  const [showPinDropdown, setShowPinDropdown] = useState(false)
+  const pinRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch('/api/recipes')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setSavedRecipes(data.filter((r: { ingredients: string[] }) => r.ingredients?.length > 0))
+      })
+      .catch(() => {})
+  }, [])
   const [generateError, setGenerateError] = useState('')
   const initialTab = typeof window !== 'undefined'
     ? (new URLSearchParams(window.location.search).get('tab') as 'plan' | 'grocery' | 'prep' | null) ?? 'plan'
@@ -743,7 +759,7 @@ export default function PlanPage() {
       const res = await fetch('/api/meal-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tweaks: combinedTweaks, nights }),
+        body: JSON.stringify({ tweaks: combinedTweaks, nights, pinnedRecipes }),
       })
       if (!res.ok) {
         const text = await res.text()
@@ -801,6 +817,50 @@ export default function PlanPage() {
       <div className="page-header">
         <h1 className="page-title">Meal Plan</h1>
         <p className="page-subtitle">Your weekly dinner plan</p>
+      </div>
+
+      {/* Pinned recipes */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div className="section-label" style={{ marginBottom: '0.5rem' }}>Pin recipes from your box</div>
+        <div style={{ position: 'relative', maxWidth: '360px' }}>
+          <input ref={pinRef} className="input"
+            placeholder="Search saved recipes…"
+            value={pinSearch}
+            onChange={e => { setPinSearch(e.target.value); setShowPinDropdown(true) }}
+            onFocus={() => setShowPinDropdown(true)}
+            onBlur={() => setTimeout(() => setShowPinDropdown(false), 150)}
+            style={{ fontSize: '0.875rem' }}
+          />
+          {showPinDropdown && pinSearch.trim() && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--parchment)', border: '1px solid var(--stone-dark)', borderRadius: 8, boxShadow: '0 4px 16px rgba(44,30,16,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 4 }}>
+              {savedRecipes
+                .filter(r => r.title.toLowerCase().includes(pinSearch.toLowerCase()) && !pinnedRecipes.find(p => p.id === r.id))
+                .slice(0, 6)
+                .map(r => (
+                  <button key={r.id} onMouseDown={() => { setPinnedRecipes(prev => [...prev, r]); setPinSearch(''); setShowPinDropdown(false) }}
+                    style={{ display: 'block', width: '100%', padding: '0.6rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Lora, serif' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--lavender-soft)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                    {r.title}
+                  </button>
+                ))}
+              {savedRecipes.filter(r => r.title.toLowerCase().includes(pinSearch.toLowerCase()) && !pinnedRecipes.find(p => p.id === r.id)).length === 0 && (
+                <div style={{ padding: '0.6rem 1rem', fontSize: '0.85rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>No matches</div>
+              )}
+            </div>
+          )}
+        </div>
+        {pinnedRecipes.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.6rem' }}>
+            {pinnedRecipes.map(r => (
+              <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'var(--lavender)', color: 'var(--parchment)', padding: '0.25rem 0.65rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500 }}>
+                {r.title}
+                <button onClick={() => setPinnedRecipes(prev => prev.filter(p => p.id !== r.id))}
+                  style={{ background: 'none', border: 'none', color: 'rgba(253,246,232,0.7)', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Last plan summary */}

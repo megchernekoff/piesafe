@@ -212,11 +212,21 @@ export default function DigestPage() {
   return (
     <div>
       {toast && (
-        <Link href="/recipes" style={{ textDecoration: 'none' }}>
-          <div className="toast" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {toast} <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>→</span>
-          </div>
-        </Link>
+        toast.includes('reconnect') ? (
+          <a href="/api/gmail/connect" style={{ textDecoration: 'none' }}>
+            <div className="toast" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {toast} <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>→</span>
+            </div>
+          </a>
+        ) : toast.includes('saved to your Recipe Box') ? (
+          <Link href="/recipes" style={{ textDecoration: 'none' }}>
+            <div className="toast" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {toast} <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>→</span>
+            </div>
+          </Link>
+        ) : (
+          <div className="toast">{toast}</div>
+        )
       )}
 
       <div className="page-header">

@@ -49,6 +49,7 @@ export async function initializeSchema() {
       user_id         TEXT NOT NULL,
       week_start_date TEXT NOT NULL,
       meals           TEXT NOT NULL DEFAULT '{}',
+      rationale       TEXT,
       grocery_list    TEXT NOT NULL DEFAULT '[]',
       grocery_custom  TEXT NOT NULL DEFAULT '[]',
       grocery_checked TEXT NOT NULL DEFAULT '[]',
@@ -59,6 +60,8 @@ export async function initializeSchema() {
   `)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_user ON meal_plans(user_id)`)
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_meal_plans_week ON meal_plans(user_id, week_start_date)`)
+  // migrations for existing tables
+  await db.execute(`ALTER TABLE meal_plans ADD COLUMN rationale TEXT`).catch(() => {})
   await db.execute(`
     CREATE TABLE IF NOT EXISTS meal_plan_days (
       id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),

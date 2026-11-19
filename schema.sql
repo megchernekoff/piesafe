@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS meal_plans (
   user_id         TEXT NOT NULL,
   week_start_date TEXT NOT NULL, -- YYYY-MM-DD (Monday)
   meals           TEXT NOT NULL DEFAULT '{}', -- JSON {monday:{dinner:{...}}, ...}
+  rationale       TEXT,
   grocery_list    TEXT NOT NULL DEFAULT '[]', -- JSON {item,amount,category}[]
   prep_notes      TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),

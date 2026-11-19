@@ -77,27 +77,16 @@ async function doSave(recipe) {
   showSaved(recipe.title)
 }
 
-// Entry point — grab page HTML and parse
+// Entry point — ask background to grab page HTML (more reliable than popup context)
 async function init() {
   loading()
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id) return showError('Could not read this page.')
 
-  let html = ''
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => document.documentElement.outerHTML,
-    })
-    html = results[0]?.result || ''
-  } catch {
-    return showError('Could not read this page. Try refreshing.')
-  }
-
   const response = await chrome.runtime.sendMessage({
     type: 'PARSE_RECIPE',
-    html,
+    tabId: tab.id,
     url: tab.url,
     pageTitle: tab.title || '',
   })

@@ -112,14 +112,20 @@ export async function POST(req: NextRequest) {
 
   // Fall back to Claude
   const $ = cheerio.load(html)
+  // Extract the best available title from HTML before stripping the DOM
+  const htmlTitle =
+    $('meta[property="og:title"]').attr('content') ||
+    $('h1').first().text().trim() ||
+    $('title').text().replace(/\s*[-|–].*$/, '').trim() ||
+    pageTitle?.replace(/\s*[-|–].*$/, '').trim() ||
+    ''
   $('script, style, nav, footer, header, aside').remove()
   const text = ($('main').text() || $('article').text() || $('body').text())
     .replace(/\s+/g, ' ').trim().slice(0, 6000)
 
   if (text.length < 100) {
-    const ogTitle = $('meta[property="og:title"]').attr('content') || $('title').text().replace(/\s*[-|].*$/, '').trim()
     return NextResponse.json(
-      { title: ogTitle || 'Saved recipe', description: '', ingredients: [], instructions: [], tags: [], _html: html },
+      { title: htmlTitle || 'Saved recipe', description: '', ingredients: [], instructions: [], tags: [], _html: html },
       { headers: corsHeaders(req) }
     )
   }
@@ -129,7 +135,7 @@ export async function POST(req: NextRequest) {
     max_tokens: 2000,
     messages: [{
       role: 'user',
-      content: `Extract the recipe from this page. Return JSON:
+      content: `Extract the recipe from this page. The recipe is called "${htmlTitle}". Return JSON:
 {"title":"...","description":"...","ingredients":["..."],"instructions":["..."],"prep_time":15,"cook_time":30,"servings":4,"tags":["..."]}
 Return only valid JSON.\n\n${text}`,
     }],
@@ -137,11 +143,9 @@ Return only valid JSON.\n\n${text}`,
 
   try {
     const parsed = JSON.parse(extractJSON((message.content[0] as { text: string }).text))
-    // Fall back to page title if Claude returned a generic placeholder
+    // Always prefer the HTML-extracted title over Claude's guess
     const isGenericTitle = !parsed.title || /^unknown|^untitled|^recipe$/i.test(parsed.title.trim())
-    if (isGenericTitle && pageTitle) {
-      parsed.title = pageTitle.replace(/\s*[-|–]\s*.+$/, '').trim() || parsed.title
-    }
+    if (isGenericTitle && htmlTitle) parsed.title = htmlTitle
     return NextResponse.json({ ...parsed, _html: html }, { headers: corsHeaders(req) })
   } catch {
     return NextResponse.json({ error: 'Could not parse a recipe from this page.' }, { status: 422, headers: corsHeaders(req) })

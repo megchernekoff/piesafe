@@ -99,6 +99,7 @@ async function init() {
     type: 'PARSE_RECIPE',
     html,
     url: tab.url,
+    pageTitle: tab.title || '',
   })
 
   if (!response) return showError('No response from server.')

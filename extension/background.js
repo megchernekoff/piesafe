@@ -41,7 +41,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'PARSE_RECIPE') {
-    parseRecipe(message.html, message.url)
+    parseRecipe(message.html, message.url, message.pageTitle)
       .then(sendResponse)
       .catch(err => sendResponse({ error: err.message }))
     return true // keep channel open for async
@@ -71,8 +71,8 @@ async function callApi(body) {
   return res.json()
 }
 
-async function parseRecipe(html, url) {
-  return callApi({ html, url, preview: true })
+async function parseRecipe(html, url, pageTitle) {
+  return callApi({ html, url, preview: true, pageTitle })
 }
 
 async function saveRecipe(recipe, url) {

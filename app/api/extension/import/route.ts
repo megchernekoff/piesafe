@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'not_logged_in' }, { status: 401, headers: corsHeaders(req) })
   }
 
-  const { html, url, preview, recipe: savedRecipe } = await req.json()
+  const { html, url, preview, recipe: savedRecipe, pageTitle } = await req.json()
 
   // Saving a previewed recipe
   if (!preview && savedRecipe) {
@@ -137,6 +137,11 @@ Return only valid JSON.\n\n${text}`,
 
   try {
     const parsed = JSON.parse(extractJSON((message.content[0] as { text: string }).text))
+    // Fall back to page title if Claude returned a generic placeholder
+    const isGenericTitle = !parsed.title || /^unknown|^untitled|^recipe$/i.test(parsed.title.trim())
+    if (isGenericTitle && pageTitle) {
+      parsed.title = pageTitle.replace(/\s*[-|–]\s*.+$/, '').trim() || parsed.title
+    }
     return NextResponse.json({ ...parsed, _html: html }, { headers: corsHeaders(req) })
   } catch {
     return NextResponse.json({ error: 'Could not parse a recipe from this page.' }, { status: 422, headers: corsHeaders(req) })

@@ -27,10 +27,11 @@ function extractJsonLd(html: string) {
     try {
       const json = JSON.parse($(el).html() || '')
       const items = Array.isArray(json) ? json : [json]
+      const isRecipe = (t: unknown) => t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))
       for (const item of items) {
-        if (item['@type'] === 'Recipe') return item
+        if (isRecipe(item['@type'])) return item
         if (Array.isArray(item['@graph'])) {
-          const r = item['@graph'].find((n: Record<string, unknown>) => n['@type'] === 'Recipe')
+          const r = item['@graph'].find((n: Record<string, unknown>) => isRecipe(n['@type']))
           if (r) return r
         }
       }
@@ -120,8 +121,10 @@ export async function POST(req: NextRequest) {
     pageTitle?.replace(/\s*[-|–].*$/, '').trim() ||
     ''
   $('script, style, nav, footer, header, aside').remove()
-  const text = ($('main').text() || $('article').text() || $('body').text())
-    .replace(/\s+/g, ' ').trim().slice(0, 6000)
+  // Try recipe plugin containers first so we don't hit the char limit on surrounding blog content
+  const recipeEl = $('[class*="wprm-recipe"],[class*="tasty-recipe"],[class*="mv-create"],[class*="recipe-card"],[class*="recipe-container"],[class*="recipe-block"],.recipe,#recipe').first()
+  const text = (recipeEl.length ? recipeEl.text() : ($('main').text() || $('article').text() || $('body').text()))
+    .replace(/\s+/g, ' ').trim().slice(0, 8000)
 
   if (text.length < 100) {
     return NextResponse.json(

@@ -684,11 +684,16 @@ export default function RecipesPage() {
               <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--ink-light)', alignItems: 'center' }}>
                 {r.prep_time && <span>{r.prep_time}m prep</span>}
                 {r.cook_time && <span>{r.cook_time}m cook</span>}
-                {isLink && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--ochre)' }}>
-                    <ExternalLink size={11} /> {new URL(r.source_url!).hostname.replace('www.', '')}
-                  </span>
-                )}
+                {isLink && (() => {
+                  try {
+                    const host = new URL(r.source_url!).hostname.replace('www.', '')
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--ochre)' }}>
+                        <ExternalLink size={11} /> {host}
+                      </span>
+                    )
+                  } catch { return null }
+                })()}
               </div>
               {/* Subtle delete button in corner */}
               <button

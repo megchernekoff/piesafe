@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get('state')
 
   if (!code || !userId) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/recipes?gmail=error`)
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/digest?gmail=error`)
   }
 
   // Exchange code for tokens
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const tokens = await tokenRes.json()
   if (!tokens.access_token) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/recipes?gmail=error`)
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/digest?gmail=error`)
   }
 
   // Get the user's Gmail address
@@ -49,5 +49,5 @@ export async function GET(req: NextRequest) {
     args: [userId, tokens.access_token, tokens.refresh_token ?? '', expiry, email],
   })
 
-  return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/recipes?gmail=connected`)
+  return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/digest?gmail=connected`)
 }

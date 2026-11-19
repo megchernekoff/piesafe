@@ -41,21 +41,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'PARSE_RECIPE') {
-    // Capture HTML from background (same path as right-click, more reliable)
-    let html = message.html || ''
-    const capture = async () => {
-      if (!html && message.tabId) {
-        try {
-          const results = await chrome.scripting.executeScript({
-            target: { tabId: message.tabId },
-            func: () => document.documentElement.outerHTML,
-          })
-          html = results[0]?.result || ''
-        } catch { html = '' }
-      }
-      return parseRecipe(html, message.url, message.pageTitle)
-    }
-    capture().then(sendResponse).catch(err => sendResponse({ error: err.message }))
+    parseRecipe(message.html, message.url, message.pageTitle)
+      .then(sendResponse)
+      .catch(err => sendResponse({ error: err.message }))
     return true // keep channel open for async
   }
 

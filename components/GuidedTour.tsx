@@ -140,6 +140,7 @@ export default function GuidedTour() {
   function complete() {
     localStorage.setItem('tour-complete', '1')
     setVisible(false)
+    router.push('/dashboard')
   }
 
   if (!visible) return null

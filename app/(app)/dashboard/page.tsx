@@ -5,6 +5,7 @@ import { Mail, ChevronRight, Clock } from 'lucide-react'
 import { db } from '@/lib/db'
 import LavenderSprig from '@/components/icons/LavenderSprig'
 import ExtensionBanner from '@/components/ExtensionBanner'
+import StarterRecipePicker from '@/components/StarterRecipePicker'
 
 function timeGreeting() {
   const h = new Date().getHours()
@@ -78,6 +79,7 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '760px' }}>
+      <StarterRecipePicker />
 
       {/* Greeting */}
       <div style={{ position: 'relative', marginBottom: '2rem' }}>

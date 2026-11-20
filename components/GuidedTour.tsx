@@ -177,7 +177,7 @@ export default function GuidedTour() {
       )
     } else if (current.arrow === 'below') {
       // Tooltip below target
-      cardTop = rect.bottom + PAD + arrowSize
+      cardTop = rect.top + rect.height + PAD + arrowSize
       cardLeft = Math.min(Math.max(rect.left + rect.width / 2, CARD_W / 2 + 16), vw - CARD_W / 2 - 16)
       transform = 'translateX(-50%)'
       arrowEl = (

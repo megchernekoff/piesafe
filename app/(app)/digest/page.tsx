@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Loader2, BookmarkPlus, Check, Unlink, Search, Plus, X, RefreshCw } from 'lucide-react'
 
-interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[] }
+interface Provider { name: string; domain: string; from?: string; senderName?: string; keywords: string[]; subscribeUrl?: string; description?: string }
 interface SavedProvider { name: string; domain: string; nextPageToken?: string }
 interface DigestRecipe { title: string; description: string; url?: string; ingredients?: string[]; instructions?: string[]; tags?: string[]; prep_time?: number | null; cook_time?: number | null; servings?: number | null }
 interface Digest {
@@ -18,21 +18,23 @@ interface Digest {
 }
 
 const SUPPORTED_PROVIDERS: Provider[] = [
-  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', senderName: 'NYT Cooking', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'] },
+  { name: 'NYT Cooking',        domain: 'nytimes.com',          from: '{nytdirect@nytimes.com OR cooking-recommendations@nytimes.com}', senderName: 'NYT Cooking', keywords: ['nyt', 'new york times', 'nytimes', 'cooking'], subscribeUrl: 'https://cooking.nytimes.com/newsletters', description: 'Recipes, guides, and practical cooking wisdom from the New York Times.' },
   { name: 'Serious Eats',       domain: 'seriouseats.com',       from: 'newsletters@seriouseats.com',     keywords: ['serious eats'] },
-  { name: 'Bon Appétit',        domain: 'newsletter.bonappetit.com', from: 'email@newsletter.bonappetit.com', keywords: ['bon appetit', 'bonappetit', 'bon appétit'] },
+  { name: 'Bon Appétit',        domain: 'newsletter.bonappetit.com', from: 'email@newsletter.bonappetit.com', keywords: ['bon appetit', 'bonappetit', 'bon appétit'], subscribeUrl: 'https://www.bonappetit.com/newsletter', description: 'Restaurant-worthy recipes and food culture from the BA test kitchen.' },
   { name: 'Food52',             domain: 'food52.com',            from: 'hello@food52.com',                keywords: ['food52'] },
   { name: 'Half Baked Harvest', domain: 'halfbakedharvest.com',  from: 'newsletter@halfbakedharvest.com', keywords: ['half baked harvest'] },
   { name: 'Smitten Kitchen',    domain: 'substack.com',          from: 'smittenkitchen@substack.com',     keywords: ['smitten kitchen', 'smittenkitchen'] },
   { name: 'The Kitchn',         domain: 'thekitchn.com',         from: 'newsletter@thekitchn.com',        keywords: ['kitchn'] },
-  { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',           keywords: ['epicurious'] },
+  { name: 'Epicurious',         domain: 'epicurious.com',        from: 'digest@epicurious.com',           keywords: ['epicurious'], subscribeUrl: 'https://www.epicurious.com/newsletter', description: 'Tested recipes and smart cooking tips from the Epicurious editors.' },
   { name: 'Budget Bytes',       domain: 'budgetbytes.com',       from: 'hello@budgetbytes.com',           keywords: ['budget bytes'] },
   { name: 'King Arthur Baking', domain: 'kingarthurbaking.com',  from: 'newsletter@kingarthurbaking.com', keywords: ['king arthur'] },
   { name: 'Simply Recipes',     domain: 'simplyrecipes.com',     from: 'newsletter@simplyrecipes.com',    keywords: ['simply recipes'] },
   { name: 'What to Cook',       domain: 'substack.com',          from: 'whattocook@substack.com',         keywords: ['what to cook', 'caro chambers', 'whattocook'] },
   { name: 'The Lost Kitchen',   domain: 'findthelostkitchen.com', from: 'frontdesk@findthelostkitchen.com', keywords: ['lost kitchen', 'findthelostkitchen'] },
-  { name: 'Ina Garten',         domain: 'substack.com',          from: 'inagarten@substack.com',           keywords: ['ina garten', 'barefoot contessa', 'inagarten'] },
+  { name: 'Ina Garten',         domain: 'substack.com',          from: 'inagarten@substack.com',           keywords: ['ina garten', 'barefoot contessa', 'inagarten'], subscribeUrl: 'https://inagarten.substack.com', description: 'Recipes and updates from Ina Garten, the Barefoot Contessa.' },
 ]
+
+const FEATURED_PROVIDER_NAMES = ['NYT Cooking', 'Bon Appétit', 'Epicurious', 'Ina Garten']
 
 function matchProviders(q: string): Provider[] {
   if (!q.trim()) return SUPPORTED_PROVIDERS
@@ -233,6 +235,54 @@ export default function DigestPage() {
         <h1 className="page-title">The Digest</h1>
         <p className="page-subtitle">Recipe emails from your inbox, your way</p>
       </div>
+
+      {/* Newsletter onboarding — shown until at least one provider is saved */}
+      {!loading && savedProviders.length === 0 && (
+        <div style={{ marginBottom: '2rem', maxWidth: '640px' }}>
+          <div className="section-label" style={{ marginBottom: '0.5rem' }}>Which of these do you get?</div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--ink-light)', marginBottom: '1.1rem', lineHeight: 1.6 }}>
+            Mark the newsletters you subscribe to and we&apos;ll pull recipes from them straight into your Digest.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {SUPPORTED_PROVIDERS.filter(p => FEATURED_PROVIDER_NAMES.includes(p.name)).map(p => {
+              const isAdded = savedProviders.some(s => s.name === p.name)
+              return (
+                <div key={p.name} style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '0.85rem 1.1rem',
+                  background: isAdded ? 'var(--lavender-soft)' : 'var(--parchment)',
+                  border: `1px solid ${isAdded ? 'var(--lavender)' : 'var(--stone-dark)'}`,
+                  borderRadius: 10,
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{p.name}</div>
+                    {p.description && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--ink-light)', marginTop: '0.1rem' }}>{p.description}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <button
+                      className={isAdded ? 'btn-primary' : 'btn-secondary'}
+                      onClick={() => isAdded ? removeProvider(p.domain) : addProvider(p)}
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem' }}
+                    >
+                      {isAdded ? <><Check size={12} /> Subscribed</> : 'Already subscribe'}
+                    </button>
+                    {p.subscribeUrl && !isAdded && (
+                      <a href={p.subscribeUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                        <button className="btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem' }}>
+                          Subscribe →
+                        </button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {!connected ? (
         <div className="card" style={{ maxWidth: '480px' }}>

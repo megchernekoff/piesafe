@@ -47,11 +47,31 @@ export async function GET(req: NextRequest) {
     contains: JSON.parse((row.contains as string) || '[]'),
   }))
 
-  // Shuffle for variety
+  // Shuffle first so each category bucket is in random order
   for (let i = filtered.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [filtered[i], filtered[j]] = [filtered[j], filtered[i]]
   }
 
-  return NextResponse.json(filtered)
+  // Round-robin sample across categories, max 10
+  const MAX = 10
+  const sample = filtered.length <= MAX ? filtered : (() => {
+    const buckets = new Map<string, typeof filtered>()
+    for (const r of filtered) {
+      const cat = String(r.category)
+      if (!buckets.has(cat)) buckets.set(cat, [])
+      buckets.get(cat)!.push(r)
+    }
+    const result: typeof filtered = []
+    const cols = Array.from(buckets.values())
+    let i = 0
+    while (result.length < MAX && cols.some(b => b.length > 0)) {
+      const bucket = cols[i % cols.length]
+      if (bucket.length > 0) result.push(bucket.shift()!)
+      i++
+    }
+    return result
+  })()
+
+  return NextResponse.json(sample)
 }

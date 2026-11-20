@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   const dislikes: string[] = JSON.parse((profileResult.rows[0]?.dislikes as string) || '[]')
 
   // Fetch everything in parallel
-  const [unreadResult, planResult, recipesResult] = await Promise.all([
+  const [unreadResult, planResult, recipesResult, recipeCountResult] = await Promise.all([
     db.execute({
       sql: lastSeen
         ? 'SELECT COUNT(*) as count FROM email_digests WHERE user_id = ? AND created_at > ? AND saved = 0 AND dismissed = 0'
@@ -46,9 +46,11 @@ export default async function DashboardPage() {
       sql: 'SELECT title, description, tags, prep_time, cook_time FROM recipes WHERE user_id = ? ORDER BY created_at DESC LIMIT 4',
       args: [userId],
     }),
+    db.execute({ sql: 'SELECT COUNT(*) as count FROM recipes WHERE user_id = ?', args: [userId] }),
   ])
 
   const unreadDigests = Number(unreadResult.rows[0]?.count ?? 0)
+  const recipeCount = Number(recipeCountResult.rows[0]?.count ?? 0)
   const hasPlan = planResult.rows.length > 0
 
   // Load today's dinner if plan exists
@@ -81,7 +83,7 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '760px' }}>
-      <StarterRecipePicker dietaryRestrictions={dietaryRestrictions} dislikes={dislikes} />
+      <StarterRecipePicker dietaryRestrictions={dietaryRestrictions} dislikes={dislikes} recipeCount={recipeCount} />
 
       {/* Greeting */}
       <div style={{ position: 'relative', marginBottom: '2rem' }}>

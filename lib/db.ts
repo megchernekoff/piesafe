@@ -110,4 +110,22 @@ export async function initializeSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS starter_recipes (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      title        TEXT NOT NULL,
+      description  TEXT NOT NULL,
+      category     TEXT NOT NULL,
+      emoji        TEXT NOT NULL,
+      color        TEXT NOT NULL,
+      prep_time    INTEGER NOT NULL DEFAULT 10,
+      cook_time    INTEGER NOT NULL DEFAULT 20,
+      servings     INTEGER NOT NULL DEFAULT 4,
+      ingredients  TEXT NOT NULL DEFAULT '[]',
+      instructions TEXT NOT NULL DEFAULT '[]',
+      tags         TEXT NOT NULL DEFAULT '[]',
+      contains     TEXT NOT NULL DEFAULT '[]',
+      active       INTEGER NOT NULL DEFAULT 1
+    )
+  `)
 }

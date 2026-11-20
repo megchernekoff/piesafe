@@ -192,11 +192,14 @@ function filterRecipes(dietary: string[], dislikes: string[]): StarterRecipe[] {
 export default function StarterRecipePicker({
   dietaryRestrictions = [],
   dislikes = [],
+  recipeCount = 0,
 }: {
   dietaryRestrictions?: string[]
   dislikes?: string[]
+  recipeCount?: number
 }) {
   const filtered = filterRecipes(dietaryRestrictions, dislikes)
+  const [phase, setPhase] = useState<'intro' | 'cards'>('intro')
   const [index, setIndex] = useState(0)
   const [saved, setSaved] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -205,17 +208,22 @@ export default function StarterRecipePicker({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (
-      localStorage.getItem('tour-complete') &&
-      !localStorage.getItem('starter-done')
-    ) {
-      if (filtered.length === 0) {
-        localStorage.setItem('starter-done', '1')
-      } else {
-        setVisible(true)
-      }
+    // Only show if the user just completed the tour for the first time
+    // and has no existing recipes yet (genuinely new user)
+    const tourJustDone = localStorage.getItem('tour-complete') === '1'
+    const alreadySeen = !!localStorage.getItem('starter-done')
+    if (!tourJustDone || alreadySeen) return
+    if (recipeCount > 1) {
+      // Existing user — skip silently
+      localStorage.setItem('starter-done', '1')
+      return
     }
-  }, [filtered.length])
+    if (filtered.length === 0) {
+      localStorage.setItem('starter-done', '1')
+    } else {
+      setVisible(true)
+    }
+  }, [filtered.length, recipeCount])
 
   function finish() {
     localStorage.setItem('starter-done', '1')
@@ -258,6 +266,49 @@ export default function StarterRecipePicker({
   }
 
   if (!visible) return null
+
+  if (phase === 'intro') {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(42,30,16,0.65)',
+        backdropFilter: 'blur(2px)',
+        zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+      }}>
+        <div style={{
+          background: 'var(--parchment)', borderRadius: 18,
+          padding: '2.25rem', textAlign: 'center',
+          maxWidth: 400, width: '100%',
+          boxShadow: '0 24px 64px rgba(42,30,16,0.35)',
+          border: '1px solid rgba(200,145,26,0.25)',
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🥧</div>
+          <h2 className="serif" style={{ fontSize: '1.6rem', fontWeight: 300, lineHeight: 1.2, marginBottom: '0.75rem' }}>
+            Let&apos;s build your Recipe Box
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)', lineHeight: 1.75, marginBottom: '1.5rem' }}>
+            We&apos;ve hand-picked a few recipes to get you started.
+            Swipe through and save anything that catches your eye —
+            or skip the ones that don&apos;t. No pressure.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button className="btn-primary" onClick={() => setPhase('cards')}
+              style={{ fontSize: '0.95rem', padding: '0.8rem' }}>
+              Let&apos;s go →
+            </button>
+            <button onClick={finish} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--ink-light)', fontSize: '0.78rem', padding: '0.4rem',
+            }}>
+              I&apos;ll add my own recipes
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (done) {
     return (

@@ -518,19 +518,19 @@ export default function RecipesPage() {
       {/* Import card */}
       <div className="card" style={{ maxWidth: '640px', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <button
+          <button data-tour="import-url"
             onClick={() => { setImportTab('url'); setImportError(''); setPhotoError('') }}
             className={importTab === 'url' ? 'btn-primary' : 'btn-secondary'}
             style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
             <Link2 size={13} /> From URL
           </button>
-          <button
+          <button data-tour="import-photo"
             onClick={() => { setImportTab('photo'); setImportError(''); setPhotoError('') }}
             className={importTab === 'photo' ? 'btn-primary' : 'btn-secondary'}
             style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
             <Camera size={13} /> From Photo
           </button>
-          <button
+          <button data-tour="import-prompt"
             onClick={() => { setImportTab('prompt'); setImportError(''); setPhotoError(''); setPromptError('') }}
             className={importTab === 'prompt' ? 'btn-primary' : 'btn-secondary'}
             style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}>

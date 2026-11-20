@@ -875,7 +875,7 @@ export default function PlanPage() {
       {/* Row 1: Pin search + Nights side by side */}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
         {/* Pin search */}
-        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+        <div data-tour="pin-search" style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <div className="section-label" style={{ marginBottom: '0.5rem' }}>Pin a recipe or meal</div>
           <input ref={pinRef} className="input"
             placeholder="Search your box, or type any meal name…"
@@ -946,7 +946,7 @@ export default function PlanPage() {
 
       {/* Row 2: Textarea + Generate */}
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '0.6rem' }}>
-        <textarea className="textarea"
+        <textarea data-tour="plan-tweaks" className="textarea"
           placeholder={'Anything else? "nothing too heavy", "use up the pork", or leave blank…'}
           value={tweaks}
           onChange={e => {

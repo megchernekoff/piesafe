@@ -18,7 +18,7 @@ export default function ExtensionBanner() {
   if (!visible) return null
 
   return (
-    <div style={{
+    <div data-tour="extension-banner" style={{
       background: 'var(--lavender-soft)',
       border: '1px solid var(--lavender)',
       borderRadius: 10,

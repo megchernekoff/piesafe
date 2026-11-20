@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   if (!userId) redirect('/sign-in')
 
   const profileResult = await db.execute({
-    sql: 'SELECT user_id, digests_last_seen FROM profiles WHERE user_id = ?',
+    sql: 'SELECT user_id, digests_last_seen, dietary_restrictions, dislikes FROM profiles WHERE user_id = ?',
     args: [userId],
   })
   if (profileResult.rows.length === 0) redirect('/onboarding')
@@ -27,6 +27,8 @@ export default async function DashboardPage() {
   const user = await currentUser()
   const name = user?.firstName ?? null
   const lastSeen = profileResult.rows[0]?.digests_last_seen as string | null
+  const dietaryRestrictions: string[] = JSON.parse((profileResult.rows[0]?.dietary_restrictions as string) || '[]')
+  const dislikes: string[] = JSON.parse((profileResult.rows[0]?.dislikes as string) || '[]')
 
   // Fetch everything in parallel
   const [unreadResult, planResult, recipesResult] = await Promise.all([
@@ -79,7 +81,7 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ maxWidth: '760px' }}>
-      <StarterRecipePicker />
+      <StarterRecipePicker dietaryRestrictions={dietaryRestrictions} dislikes={dislikes} />
 
       {/* Greeting */}
       <div style={{ position: 'relative', marginBottom: '2rem' }}>

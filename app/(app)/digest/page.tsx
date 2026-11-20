@@ -267,7 +267,7 @@ export default function DigestPage() {
                       onClick={() => isAdded ? removeProvider(p.domain) : addProvider(p)}
                       style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem' }}
                     >
-                      {isAdded ? <><Check size={12} /> Subscribed</> : 'Already subscribe'}
+                      {isAdded ? <><Check size={12} /> Subscribed</> : 'Already subscribed'}
                     </button>
                     {p.subscribeUrl && !isAdded && (
                       <a href={p.subscribeUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>

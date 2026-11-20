@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import GuidedTour from '@/components/GuidedTour'
 import { db } from '@/lib/db'
 
 async function getUnreadDigestCount(userId: string): Promise<number> {
@@ -31,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="app-shell">
       <Sidebar unreadDigests={unreadDigests} />
       <main className="main-content">{children}</main>
+      <GuidedTour />
     </div>
   )
 }

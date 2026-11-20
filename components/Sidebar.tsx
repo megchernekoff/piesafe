@@ -24,7 +24,8 @@ export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number 
           <span style={{ lineHeight: 1 }}>Pie <span>Safe</span></span>
         </div>
         {NAV.map(({ href, icon: Icon, label }) => (
-          <Link key={href} href={href} style={{ textDecoration: 'none' }}>
+          <Link key={href} href={href} style={{ textDecoration: 'none' }}
+            data-tour={href === '/recipes' ? 'recipes' : href === '/plan' ? 'plan' : href === '/digest' ? 'digest' : undefined}>
             <button className={`nav-item${path === href ? ' active' : ''}`}>
               <Icon size={15} />
               <span style={{ flex: 1 }}>{label}</span>

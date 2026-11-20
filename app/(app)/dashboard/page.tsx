@@ -6,13 +6,7 @@ import { db } from '@/lib/db'
 import LavenderSprig from '@/components/icons/LavenderSprig'
 import ExtensionBanner from '@/components/ExtensionBanner'
 import StarterRecipePicker from '@/components/StarterRecipePicker'
-
-function timeGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
-}
+import TimeGreeting from '@/components/TimeGreeting'
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -39,7 +33,7 @@ export default async function DashboardPage() {
       args: lastSeen ? [userId, lastSeen] : [userId],
     }),
     db.execute({
-      sql: 'SELECT id FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+      sql: 'SELECT id, week_start_date FROM meal_plans WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
       args: [userId],
     }),
     db.execute({
@@ -57,10 +51,9 @@ export default async function DashboardPage() {
   let todayDinner: { title: string; description: string; tags: string[] } | null = null
   if (hasPlan) {
     const planId = planResult.rows[0].id as string
-    const today = new Date()
-    // Map day of week to day_number (Mon=1 ... Sun=7), use day 1 as fallback
-    const dow = today.getDay()
-    const dayNum = dow === 0 ? 7 : dow
+    const weekStartDate = planResult.rows[0].week_start_date as string
+    const msPerDay = 1000 * 60 * 60 * 24
+    const dayNum = Math.floor((Date.now() - new Date(weekStartDate).getTime()) / msPerDay) + 1
     const dayResult = await db.execute({
       sql: 'SELECT dinner FROM meal_plan_days WHERE plan_id = ? AND day_number = ?',
       args: [planId, dayNum],
@@ -91,7 +84,7 @@ export default async function DashboardPage() {
           <LavenderSprig size={28} opacity={0.18} />
         </div>
         <h1 className="page-title">
-          {timeGreeting()}{name ? `, ${name}` : ''}
+          <TimeGreeting name={name} />
         </h1>
         <p className="page-subtitle">Here&apos;s where things stand</p>
       </div>

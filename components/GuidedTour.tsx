@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { X } from 'lucide-react'
+import PieIcon from '@/components/icons/PieIcon'
 
 type Arrow = 'left' | 'above' | 'below'
 interface TargetRect { top: number; left: number; width: number; height: number }
@@ -88,11 +89,30 @@ const STEPS: {
 ]
 
 const GIFT_RECIPE = {
-  title: 'Welcome Gift Recipe',
-  description: 'A personal recipe from the Pie Safe creator — full details coming soon.',
-  ingredients: [],
-  instructions: [],
-  tags: ['gift', 'from the creator'],
+  title: 'Orange Glazed Chicken Breast',
+  description: 'A favorite of the Pie Safe founder. Serve over rice — double the glaze if you want extra sauce.',
+  ingredients: [
+    '4 chicken breast halves (bone in, skin on)',
+    '1/2 tsp salt',
+    '1/4 cup butter',
+    '2 tbsp flour',
+    '2 tbsp sugar',
+    '1/4 tsp dry ground mustard',
+    '1/4 tsp cinnamon',
+    '1/16 tsp ginger',
+    '1 1/2 cups orange juice',
+  ],
+  instructions: [
+    'Sprinkle chicken with salt and brown lightly in butter. Remove chicken from pan.',
+    'Stir flour, sugar, and spices into the pan drippings.',
+    'Gradually add orange juice, stirring until bubbling and thickened.',
+    'Add chicken breasts back to the pan. Reduce heat, cover, and cook until done — about 1 to 1.5 hours on the stovetop or 1 hour in a 350°F oven.',
+    'Serve over rice. Double the glaze (flour, sugar, spices, and orange juice) if you want extra sauce.',
+  ],
+  prep_time: 10,
+  cook_time: 75,
+  servings: 4,
+  tags: ['chicken', 'gift', 'from the founder'],
 }
 
 const CARD_W = 340
@@ -100,6 +120,7 @@ const CARD_W = 340
 export default function GuidedTour() {
   const router = useRouter()
   const { userId } = useAuth()
+  const [phase, setPhase] = useState<'welcome' | 'touring'>('welcome')
   const [step, setStep] = useState(0)
   const [visible, setVisible] = useState(false)
   const [rect, setRect] = useState<TargetRect | null>(null)
@@ -119,7 +140,7 @@ export default function GuidedTour() {
     if (!userId) return
     if (!localStorage.getItem(`tour-complete-${userId}`)) {
       setVisible(true)
-      router.push(STEPS[0].page)
+      // Stay on current page and show welcome screen first
       if (!localStorage.getItem(`tour-gift-sent-${userId}`)) {
         fetch('/api/recipes', {
           method: 'POST',
@@ -128,16 +149,21 @@ export default function GuidedTour() {
         }).then(() => localStorage.setItem(`tour-gift-sent-${userId}`, '1')).catch(() => {})
       }
     }
-  }, [router, userId])
+  }, [userId])
 
   useEffect(() => {
-    if (!visible) return
+    if (!visible || phase !== 'touring') return
     setRect(null)
     findTarget(STEPS[step].tourId)
-  }, [step, visible, findTarget])
+  }, [step, visible, phase, findTarget])
+
+  function startTour() {
+    setPhase('touring')
+    router.push(STEPS[0].page)
+  }
 
   function goTo(n: number) {
-    const changing = STEPS[n].page !== STEPS[step].page
+    const changing = phase === 'touring' && STEPS[n].page !== STEPS[step].page
     setStep(n)
     if (changing) router.push(STEPS[n].page)
   }
@@ -149,6 +175,49 @@ export default function GuidedTour() {
   }
 
   if (!visible) return null
+
+  if (phase === 'welcome') {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(42,30,16,0.65)',
+        backdropFilter: 'blur(2px)',
+        zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+      }}>
+        <div style={{
+          background: 'var(--parchment)', borderRadius: 18,
+          padding: '2.5rem 2.25rem', textAlign: 'center',
+          maxWidth: 420, width: '100%',
+          boxShadow: '0 24px 64px rgba(42,30,16,0.35)',
+          border: '1px solid rgba(200,145,26,0.25)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <PieIcon size={52} />
+          </div>
+          <h2 className="serif" style={{ fontSize: '1.9rem', fontWeight: 300, lineHeight: 1.15, marginBottom: '0.85rem' }}>
+            Welcome to Pie Safe
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)', lineHeight: 1.75, marginBottom: '2rem' }}>
+            Your personal recipe box and meal planner — one place for every recipe, every week, and every dinner question answered.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button className="btn-primary" onClick={startTour}
+              style={{ fontSize: '0.95rem', padding: '0.8rem' }}>
+              Take a quick tour →
+            </button>
+            <button onClick={complete} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--ink-light)', fontSize: '0.78rem', padding: '0.4rem',
+            }}>
+              Skip, I&apos;ll explore on my own
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const current = STEPS[step]
   const isLast = step === STEPS.length - 1
@@ -311,13 +380,13 @@ export default function GuidedTour() {
                   fontSize: '0.66rem', fontWeight: 700, color: 'var(--ochre)',
                   textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.12rem',
                 }}>
-                  Welcome Gift · From the creator
+                  Welcome Gift · From the founder
                 </div>
                 <div className="serif" style={{ fontSize: '0.92rem', color: 'var(--ink)' }}>
                   {GIFT_RECIPE.title}
                 </div>
                 <div style={{ fontSize: '0.73rem', color: 'var(--ink-light)', fontStyle: 'italic', marginTop: '0.1rem' }}>
-                  {GIFT_RECIPE.description}
+                  A family favorite, passed along to you.
                 </div>
               </div>
             </div>

@@ -31,7 +31,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="app-shell">
       <Sidebar unreadDigests={unreadDigests} />
-      <main className="main-content">{children}</main>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <main className="main-content" style={{ flex: 1 }}>{children}</main>
+        <div style={{
+          textAlign: 'center',
+          padding: '0.75rem 1rem',
+          fontSize: '0.72rem',
+          color: 'var(--ink-light)',
+          borderTop: '1px solid var(--stone-dark)',
+          flexShrink: 0,
+        }}>
+          Pie Safe is in <strong>beta</strong> — found a bug?{' '}
+          <a href="mailto:pie.safe314@gmail.com" style={{ color: 'var(--lavender)' }}>pie.safe314@gmail.com</a>
+        </div>
+      </div>
       <GuidedTour />
     </div>
   )

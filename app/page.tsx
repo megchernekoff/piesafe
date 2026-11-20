@@ -283,6 +283,17 @@ export default function LandingPage() {
           </>
         )}
       </div>
+      <div style={{
+        textAlign: 'center',
+        padding: '1.25rem',
+        fontSize: '0.78rem',
+        color: 'var(--ink-light)',
+        borderTop: '1px solid var(--stone-dark)',
+        marginTop: '2rem',
+      }}>
+        Pie Safe is currently in <strong>beta</strong>. Found a bug or have feedback?{' '}
+        <a href="mailto:pie.safe314@gmail.com" style={{ color: 'var(--lavender)' }}>pie.safe314@gmail.com</a>
+      </div>
     </div>
   )
 }

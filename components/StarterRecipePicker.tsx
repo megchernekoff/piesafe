@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { ThumbsDown, ThumbsUp, BookOpen } from 'lucide-react'
 
 interface StarterRecipe {
@@ -179,6 +180,7 @@ export default function StarterRecipePicker({
   dislikes?: string[]
   recipeCount?: number
 }) {
+  const { userId } = useAuth()
   const [recipes, setRecipes] = useState<StarterRecipe[]>([])
   const [phase, setPhase] = useState<'intro' | 'cards'>('intro')
   const [index, setIndex] = useState(0)
@@ -189,11 +191,14 @@ export default function StarterRecipePicker({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const tourJustDone = localStorage.getItem('tour-complete') === '1'
-    const alreadySeen = !!localStorage.getItem('starter-done')
+    if (!userId) return
+    const tourKey = `tour-complete-${userId}`
+    const doneKey = `starter-done-${userId}`
+    const tourJustDone = localStorage.getItem(tourKey) === '1'
+    const alreadySeen = !!localStorage.getItem(doneKey)
     if (!tourJustDone || alreadySeen) return
     if (recipeCount > 1) {
-      localStorage.setItem('starter-done', '1')
+      localStorage.setItem(doneKey, '1')
       return
     }
 
@@ -205,17 +210,17 @@ export default function StarterRecipePicker({
       .then(r => r.json())
       .then((data: StarterRecipe[]) => {
         if (!Array.isArray(data) || data.length === 0) {
-          localStorage.setItem('starter-done', '1')
+          localStorage.setItem(doneKey, '1')
         } else {
           setRecipes(data)
           setVisible(true)
         }
       })
       .catch(() => {})
-  }, [recipeCount])
+  }, [userId, recipeCount])
 
   function finish() {
-    localStorage.setItem('starter-done', '1')
+    if (userId) localStorage.setItem(`starter-done-${userId}`, '1')
     setDone(true)
   }
 

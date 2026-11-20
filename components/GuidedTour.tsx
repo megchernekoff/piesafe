@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { X } from 'lucide-react'
 
 type Arrow = 'left' | 'above' | 'below'
@@ -96,6 +97,7 @@ const CARD_W = 340
 
 export default function GuidedTour() {
   const router = useRouter()
+  const { userId } = useAuth()
   const [step, setStep] = useState(0)
   const [visible, setVisible] = useState(false)
   const [rect, setRect] = useState<TargetRect | null>(null)
@@ -112,18 +114,19 @@ export default function GuidedTour() {
   }, [])
 
   useEffect(() => {
-    if (!localStorage.getItem('tour-complete')) {
+    if (!userId) return
+    if (!localStorage.getItem(`tour-complete-${userId}`)) {
       setVisible(true)
       router.push(STEPS[0].page)
-      if (!localStorage.getItem('tour-gift-sent')) {
+      if (!localStorage.getItem(`tour-gift-sent-${userId}`)) {
         fetch('/api/recipes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(GIFT_RECIPE),
-        }).then(() => localStorage.setItem('tour-gift-sent', '1')).catch(() => {})
+        }).then(() => localStorage.setItem(`tour-gift-sent-${userId}`, '1')).catch(() => {})
       }
     }
-  }, [router])
+  }, [router, userId])
 
   useEffect(() => {
     if (!visible) return
@@ -138,7 +141,7 @@ export default function GuidedTour() {
   }
 
   function complete() {
-    localStorage.setItem('tour-complete', '1')
+    if (userId) localStorage.setItem(`tour-complete-${userId}`, '1')
     setVisible(false)
     router.push('/dashboard')
   }

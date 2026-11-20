@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Profile {
   display_name: string
@@ -22,10 +23,19 @@ const DEFAULT: Profile = {
 }
 
 export default function PreferencesPage() {
+  const router = useRouter()
   const [profile, setProfile] = useState<Profile>(DEFAULT)
   const [dislikeInput, setDislikeInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    await fetch('/api/account', { method: 'DELETE' })
+    router.push('/')
+  }
 
   useEffect(() => {
     fetch('/api/preferences')
@@ -171,6 +181,53 @@ export default function PreferencesPage() {
           </button>
         </div>
       </form>
+
+      {/* Danger zone */}
+      <div style={{ maxWidth: '540px', marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--sand)' }}>
+        <div className="section-label" style={{ marginBottom: '0.75rem', color: 'var(--ink-light)' }}>Danger zone</div>
+        {!deleteConfirm ? (
+          <button
+            type="button"
+            onClick={() => setDeleteConfirm(true)}
+            style={{
+              background: 'none', border: '1px solid #c0392b', borderRadius: 8,
+              color: '#c0392b', fontSize: '0.875rem', padding: '0.5rem 1rem',
+              cursor: 'pointer',
+            }}
+          >
+            Delete account
+          </button>
+        ) : (
+          <div style={{ background: '#fff5f5', border: '1px solid #fca5a5', borderRadius: 10, padding: '1.25rem' }}>
+            <p style={{ fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
+              This will permanently delete your account, all recipes, meal plans, and preferences.
+              <strong> This cannot be undone.</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{
+                  background: '#c0392b', border: 'none', borderRadius: 8,
+                  color: '#fff', fontSize: '0.875rem', padding: '0.5rem 1rem',
+                  cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1,
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Yes, delete everything'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(false)}
+                className="btn-secondary"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -21,7 +21,15 @@ async function seedStarterRecipes() {
 }
 
 // POST /api/setup — run once after first deploy to create DB tables.
-export async function POST() {
+// Requires Authorization: Bearer <SETUP_SECRET> if that env var is set.
+export async function POST(req: Request) {
+  const secret = process.env.SETUP_SECRET
+  if (secret) {
+    const auth = req.headers.get('authorization') ?? ''
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
   try {
     await initializeSchema()
     await seedStarterRecipes()

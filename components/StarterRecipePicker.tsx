@@ -207,7 +207,10 @@ export default function StarterRecipePicker({
     if (dislikes.length) params.set('dislikes', dislikes.join(','))
 
     fetch(`/api/starter-recipes?${params}`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('server error')
+        return r.json()
+      })
       .then((data: StarterRecipe[]) => {
         if (!Array.isArray(data) || data.length === 0) {
           localStorage.setItem(doneKey, '1')

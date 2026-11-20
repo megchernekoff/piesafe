@@ -15,13 +15,14 @@ const STEPS: {
   body: string
   hasGift?: boolean
   switchTab?: string
+  cta?: { label: string; href: string }
 }[] = [
   {
     tourId: 'recipes',
     page: '/recipes',
     arrow: 'left',
     title: 'Your Recipe Box',
-    body: 'Everything starts here. Save recipes from anywhere and build your personal library.\n\nWe\'ve added a welcome recipe from the creator to get you started.',
+    body: 'This is your Recipe Box — the home for every recipe in your collection. Anything you save, import, or create lives here, ready to pull into a meal plan whenever you need it.\n\nWe\'ve added a welcome recipe from the creator to get you started.',
     hasGift: true,
   },
   {
@@ -54,6 +55,7 @@ const STEPS: {
     arrow: 'above',
     title: 'Save from anywhere with one click',
     body: 'Install the Pie Safe Chrome extension and a "Save to Pie Safe" option appears on any page. Right-click any recipe and it\'s in your box instantly — no copy-pasting needed.',
+    cta: { label: 'Add to Chrome — it\'s free', href: 'https://chromewebstore.google.com/detail/pie-safe/gmlfjbhjimpojkadhckonigmlappjjmb' },
   },
   {
     tourId: 'plan',
@@ -278,10 +280,22 @@ export default function GuidedTour() {
           <p style={{
             fontSize: '0.855rem', color: 'var(--ink-light)',
             lineHeight: 1.75, whiteSpace: 'pre-line',
-            marginBottom: current.hasGift ? '1rem' : '1.1rem',
+            marginBottom: (current.hasGift || current.cta) ? '1rem' : '1.1rem',
           }}>
             {current.body}
           </p>
+
+          {current.cta && (
+            <a href={current.cta.href} target="_blank" rel="noopener noreferrer"
+              style={{
+                display: 'inline-block', marginBottom: '1.1rem',
+                fontSize: '0.825rem', color: 'var(--ochre)',
+                textDecoration: 'none', fontWeight: 600,
+              }}
+            >
+              {current.cta.label} →
+            </a>
+          )}
 
           {current.hasGift && (
             <div style={{

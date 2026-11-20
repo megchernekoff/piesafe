@@ -170,25 +170,6 @@ const RECIPES: StarterRecipe[] = [
   },
 ]
 
-const RESTRICTION_EXCLUDES: Record<string, string[]> = {
-  'vegetarian': ['meat', 'fish', 'shellfish'],
-  'vegan':      ['meat', 'fish', 'shellfish', 'dairy', 'eggs'],
-  'gluten-free': ['gluten'],
-  'dairy-free':  ['dairy'],
-  'nut-free':    ['nuts'],
-  'halal':       ['pork'],
-  'kosher':      ['pork', 'shellfish'],
-}
-
-function filterRecipes(dietary: string[], dislikes: string[]): StarterRecipe[] {
-  const forbidden = new Set(dietary.flatMap(d => RESTRICTION_EXCLUDES[d] ?? []))
-  return RECIPES.filter(recipe => {
-    if (recipe.contains.some(c => forbidden.has(c))) return false
-    const haystack = `${recipe.title} ${recipe.description} ${recipe.ingredients.join(' ')}`.toLowerCase()
-    return !dislikes.some(d => haystack.includes(d.toLowerCase()))
-  })
-}
-
 export default function StarterRecipePicker({
   dietaryRestrictions = [],
   dislikes = [],
@@ -198,7 +179,7 @@ export default function StarterRecipePicker({
   dislikes?: string[]
   recipeCount?: number
 }) {
-  const filtered = filterRecipes(dietaryRestrictions, dislikes)
+  const [recipes, setRecipes] = useState<StarterRecipe[]>([])
   const [phase, setPhase] = useState<'intro' | 'cards'>('intro')
   const [index, setIndex] = useState(0)
   const [saved, setSaved] = useState(0)
@@ -208,22 +189,30 @@ export default function StarterRecipePicker({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    // Only show if the user just completed the tour for the first time
-    // and has no existing recipes yet (genuinely new user)
     const tourJustDone = localStorage.getItem('tour-complete') === '1'
     const alreadySeen = !!localStorage.getItem('starter-done')
     if (!tourJustDone || alreadySeen) return
     if (recipeCount > 1) {
-      // Existing user — skip silently
       localStorage.setItem('starter-done', '1')
       return
     }
-    if (filtered.length === 0) {
-      localStorage.setItem('starter-done', '1')
-    } else {
-      setVisible(true)
-    }
-  }, [filtered.length, recipeCount])
+
+    const params = new URLSearchParams()
+    if (dietaryRestrictions.length) params.set('dietary', dietaryRestrictions.join(','))
+    if (dislikes.length) params.set('dislikes', dislikes.join(','))
+
+    fetch(`/api/starter-recipes?${params}`)
+      .then(r => r.json())
+      .then((data: StarterRecipe[]) => {
+        if (!Array.isArray(data) || data.length === 0) {
+          localStorage.setItem('starter-done', '1')
+        } else {
+          setRecipes(data)
+          setVisible(true)
+        }
+      })
+      .catch(() => {})
+  }, [recipeCount])
 
   function finish() {
     localStorage.setItem('starter-done', '1')
@@ -234,7 +223,7 @@ export default function StarterRecipePicker({
     setExiting(direction)
     setTimeout(() => {
       setExiting(null)
-      if (index >= filtered.length - 1) {
+      if (index >= recipes.length - 1) {
         finish()
       } else {
         setIndex(i => i + 1)
@@ -245,7 +234,7 @@ export default function StarterRecipePicker({
   async function accept() {
     if (saving) return
     setSaving(true)
-    const r = RECIPES[index]
+    const r = recipes[index]
     await fetch('/api/recipes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,7 +340,7 @@ export default function StarterRecipePicker({
     )
   }
 
-  const recipe = filtered[index]
+  const recipe = recipes[index]
 
   return (
     <div style={{
@@ -387,7 +376,7 @@ export default function StarterRecipePicker({
               {recipe.category}
             </span>
             <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)' }}>
-              {index + 1} / {filtered.length}
+              {index + 1} / {recipes.length}
             </span>
           </div>
 
@@ -411,7 +400,7 @@ export default function StarterRecipePicker({
               <div style={{
                 height: '100%', borderRadius: 2,
                 background: recipe.color,
-                width: `${((index + 1) / filtered.length) * 100}%`,
+                width: `${((index + 1) / recipes.length) * 100}%`,
                 transition: 'width 0.3s ease',
               }} />
             </div>

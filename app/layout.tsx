@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Suspense } from 'react'
+import Script from 'next/script'
 import { PostHogInit, PostHogPageview, PostHogIdentify } from '@/components/PostHogProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Pie Safe — Meal Planning',
   description: "Your family's meal planning hub",
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <html lang="en">
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+          <meta name="theme-color" content="#6b5c8a" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,6 +34,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense><PostHogPageview /></Suspense>
           <PostHogIdentify />
           {children}
+          <Script id="sw-register" strategy="afterInteractive">{`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+            }
+          `}</Script>
         </body>
       </html>
     </ClerkProvider>

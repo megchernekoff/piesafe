@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" fill="#534670"/>
+  <!-- Pie base -->
+  <circle cx="256" cy="256" r="168" fill="#ecdcb0"/>
+  <!-- Highlighted slice (top-right quarter, 12 o'clock to 3 o'clock) -->
+  <path d="M256,256 L256,88 A168,168 0 0,1 424,256 Z" fill="#c8911a"/>
+  <!-- Slice dividers -->
+  <line x1="256" y1="88" x2="256" y2="424" stroke="#534670" stroke-width="10" stroke-linecap="round"/>
+  <line x1="88" y1="256" x2="424" y2="256" stroke="#534670" stroke-width="10" stroke-linecap="round"/>
+  <!-- Pie crust ring -->
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#a87514" stroke-width="14"/>
+</svg>

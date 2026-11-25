@@ -16,14 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     share_target: {
       action: '/share-target',
-      method: 'POST',
-      enctype: 'multipart/form-data',
-      params: {
-        title: 'title',
-        text: 'text',
-        url: 'url',
-        files: [{ name: 'media', accept: ['image/*'] }],
-      },
+      method: 'GET',
+      params: { title: 'title', text: 'text', url: 'url' },
     },
   }
 }

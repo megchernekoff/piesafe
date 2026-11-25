@@ -276,8 +276,8 @@ export default function StarterRecipePicker({
       }}>
         <div style={{
           background: 'var(--parchment)', borderRadius: 18,
-          padding: '2.25rem', textAlign: 'center',
-          maxWidth: 400, width: '100%',
+          padding: '2rem 1.5rem', textAlign: 'center',
+          maxWidth: 360, width: '100%',
           boxShadow: '0 24px 64px rgba(42,30,16,0.35)',
           border: '1px solid rgba(200,145,26,0.25)',
         }}>
@@ -320,7 +320,7 @@ export default function StarterRecipePicker({
         <div style={{
           background: 'var(--parchment)', borderRadius: 16,
           padding: '2.5rem', textAlign: 'center',
-          maxWidth: 380, width: '100%',
+          maxWidth: 360, width: '100%',
           boxShadow: '0 24px 64px rgba(42,30,16,0.3)',
           border: '1px solid rgba(200,145,26,0.25)',
         }}>
@@ -361,7 +361,7 @@ export default function StarterRecipePicker({
     }}>
       {/* Card */}
       <div style={{
-        width: '100%', maxWidth: 400,
+        width: '100%', maxWidth: 360,
         transform: exiting === 'right' ? 'translateX(80px)' : exiting === 'left' ? 'translateX(-80px)' : 'translateX(0)',
         opacity: exiting ? 0 : 1,
         transition: 'transform 0.28s ease, opacity 0.28s ease',

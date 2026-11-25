@@ -398,9 +398,14 @@ export default function RecipesPage() {
   const [photoError, setPhotoError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [promptText, setPromptText] = useState('')
-  const [generatingPrompt, setGeneratingPrompt] = useState(false)
+  const [promptMessages, setPromptMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [promptInput, setPromptInput] = useState('')
+  const [promptThinking, setPromptThinking] = useState(false)
+  const [promptRecipe, setPromptRecipe] = useState<Record<string, unknown> | null>(null)
+  const [promptSaving, setPromptSaving] = useState(false)
+  const [promptSaved, setPromptSaved] = useState(false)
   const [promptError, setPromptError] = useState('')
+  const promptBottomRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -463,14 +468,38 @@ export default function RecipesPage() {
     setImportingPhoto(false)
   }
 
-  async function handleGenerateFromPrompt() {
-    if (!promptText.trim()) return
-    setGeneratingPrompt(true)
+  async function handlePromptSend() {
+    const text = promptInput.trim()
+    if (!text || promptThinking) return
+    setPromptInput('')
     setPromptError('')
-    const res = await fetch('/api/recipes/generate', {
+    const history = promptMessages.map(m => ({ role: m.role, content: m.content }))
+    setPromptMessages(prev => [...prev, { role: 'user', content: text }])
+    setPromptThinking(true)
+    try {
+      const res = await fetch('/api/recipes/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history }),
+      })
+      const data = await res.json()
+      setPromptMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      if (data.recipe) { setPromptRecipe(data.recipe); setPromptSaved(false) }
+    } catch {
+      setPromptError('Something went wrong — try again.')
+    }
+    setPromptThinking(false)
+    setTimeout(() => promptBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
+
+  async function handlePromptSave() {
+    if (!promptRecipe) return
+    setPromptSaving(true)
+    setPromptError('')
+    const res = await fetch('/api/recipes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptText }),
+      body: JSON.stringify(promptRecipe),
     })
     const data = await res.json()
     if (data.duplicate) {
@@ -478,10 +507,10 @@ export default function RecipesPage() {
     } else if (data.error) {
       setPromptError(data.error)
     } else {
-      setPromptText('')
+      setPromptSaved(true)
       load()
     }
-    setGeneratingPrompt(false)
+    setPromptSaving(false)
   }
 
   async function handleDelete(id: string) {
@@ -629,27 +658,74 @@ export default function RecipesPage() {
         )}
 
         {importTab === 'prompt' && (
-          <div>
-            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Describe the recipe you want</div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '0.75rem' }}>
-              Claude will generate a full recipe and save it to your box.
-            </p>
-            <textarea className="textarea"
-              placeholder="e.g. A quick weeknight pasta with lemon and ricotta, vegetarian, ready in 30 minutes…"
-              value={promptText}
-              onChange={e => setPromptText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleGenerateFromPrompt() }}
-              style={{ marginBottom: '0.75rem', minHeight: '90px' }}
-            />
-            <button className="btn-primary" onClick={handleGenerateFromPrompt}
-              disabled={generatingPrompt || !promptText.trim()}>
-              {generatingPrompt
-                ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Creating recipe…</>
-                : '✦ Create recipe'}
-            </button>
-            {promptError && (
-              <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{promptError}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Chat thread */}
+            {promptMessages.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '320px', overflowY: 'auto', padding: '0.25rem 0' }}>
+                {promptMessages.map((m, i) => (
+                  <div key={i} style={{
+                    alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                    maxWidth: '88%',
+                    background: m.role === 'user' ? 'var(--lavender)' : 'var(--stone)',
+                    color: m.role === 'user' ? 'var(--parchment)' : 'var(--ink)',
+                    borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                    padding: '0.6rem 0.9rem',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {m.content}
+                  </div>
+                ))}
+                {promptThinking && (
+                  <div style={{ alignSelf: 'flex-start', background: 'var(--stone)', borderRadius: '12px 12px 12px 2px', padding: '0.6rem 0.9rem' }}>
+                    <span className="spinner" style={{ width: 14, height: 14 }} />
+                  </div>
+                )}
+                <div ref={promptBottomRef} />
+              </div>
             )}
+
+            {/* Recipe preview + save */}
+            {promptRecipe && (
+              <div style={{ background: 'var(--parchment)', border: '1px solid var(--stone-dark)', borderRadius: 10, padding: '0.85rem 1rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ochre)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Recipe ready</div>
+                <div className="serif" style={{ fontSize: '1.1rem', fontWeight: 400, marginBottom: '0.2rem' }}>{String(promptRecipe.title)}</div>
+                {!!promptRecipe.description && <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginBottom: '0.75rem', lineHeight: 1.5 }}>{String(promptRecipe.description)}</p>}
+                <button className="btn-primary" onClick={handlePromptSave}
+                  disabled={promptSaving || promptSaved}
+                  style={{ fontSize: '0.82rem' }}>
+                  {promptSaved ? '✓ Saved to recipe box'
+                    : promptSaving ? <><Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
+                    : '+ Save to recipe box'}
+                </button>
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input className="input"
+                value={promptInput}
+                onChange={e => setPromptInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handlePromptSend()}
+                placeholder={promptMessages.length === 0 ? 'What are you in the mood for?' : 'Refine it, ask anything…'}
+                style={{ flex: 1, fontSize: '0.875rem' }}
+              />
+              <button className="btn-primary" onClick={handlePromptSend}
+                disabled={promptThinking || !promptInput.trim()}
+                style={{ padding: '0.65rem 0.85rem' }}>
+                <Send size={14} />
+              </button>
+            </div>
+
+            {promptMessages.length > 0 && (
+              <button className="btn-ghost" style={{ fontSize: '0.78rem', color: 'var(--ink-light)', alignSelf: 'flex-start' }}
+                onClick={() => { setPromptMessages([]); setPromptRecipe(null); setPromptSaved(false); setPromptError('') }}>
+                Start over
+              </button>
+            )}
+
+            {promptError && <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem' }}>{promptError}</p>}
           </div>
         )}
       </div>

@@ -14,10 +14,25 @@ self.addEventListener('activate', event => {
 });
 
 const STATIC_PATTERNS = [/^\/_next\/static\//, /\/icons\//, /\/apple-touch-icon\.png$/];
+const SHARE_CACHE = 'share-target-v1';
 
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Intercept the Web Share Target POST, stash the image, redirect to the page
+  if (url.pathname === '/share-target' && request.method === 'POST') {
+    event.respondWith((async () => {
+      const formData = await request.formData();
+      const file = formData.get('media');
+      if (file) {
+        const cache = await caches.open(SHARE_CACHE);
+        await cache.put('shared-media', new Response(file, { headers: { 'Content-Type': file.type } }));
+      }
+      return Response.redirect('/share-target', 303);
+    })());
+    return;
+  }
 
   // Skip non-GET, cross-origin, and API requests — let them hit the network normally
   if (request.method !== 'GET') return;

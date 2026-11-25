@@ -421,7 +421,9 @@ export default function RecipesPage() {
       body: JSON.stringify({ url: importUrl }),
     })
     const data = await res.json()
-    if (data.error) {
+    if (data.duplicate) {
+      setImportError(`You already have "${data.existing.title}" in your recipe box.`)
+    } else if (data.error) {
       setImportError(data.error)
     } else {
       setImportUrl('')
@@ -448,7 +450,9 @@ export default function RecipesPage() {
     form.append('image', imageFile)
     const res = await fetch('/api/import-image', { method: 'POST', body: form })
     const data = await res.json()
-    if (data.error) {
+    if (data.duplicate) {
+      setPhotoError(`You already have "${data.existing.title}" in your recipe box.`)
+    } else if (data.error) {
       setPhotoError(data.error)
     } else {
       setImageFile(null)
@@ -469,7 +473,9 @@ export default function RecipesPage() {
       body: JSON.stringify({ prompt: promptText }),
     })
     const data = await res.json()
-    if (data.error) {
+    if (data.duplicate) {
+      setPromptError(`You already have "${data.existing.title}" in your recipe box.`)
+    } else if (data.error) {
       setPromptError(data.error)
     } else {
       setPromptText('')

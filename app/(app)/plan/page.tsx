@@ -251,6 +251,7 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
   const originalServings = d.servings || 2
   const scale = servings / originalServings
   const [saved, setSaved] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
   const [saving, setSaving] = useState(false)
   const [swapping, setSwapping] = useState(false)
   const [swapReason, setSwapReason] = useState('')
@@ -275,7 +276,7 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
 
   async function saveToBox() {
     setSaving(true)
-    await fetch('/api/recipes', {
+    const res = await fetch('/api/recipes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -289,7 +290,11 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
         tags: d.tags,
       }),
     })
+    const data = await res.json()
     setSaving(false)
+    if (data.duplicate) {
+      setSaveMsg('Already in your recipe box')
+    }
     setSaved(true)
   }
 
@@ -327,10 +332,10 @@ function DayPanel({ day, planId, onClose, onDinnerUpdate }: { day: DayPlan; plan
           <button
             onClick={saveToBox}
             disabled={saving || saved}
-            className={saved ? 'btn-secondary' : 'btn-secondary'}
+            className="btn-secondary"
             style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.85rem', color: saved ? 'var(--lavender)' : undefined }}>
             {saved
-              ? <><Check size={12} /> Saved to box</>
+              ? <><Check size={12} /> {saveMsg || 'Saved to box'}</>
               : saving
               ? <><Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
               : <><BookmarkPlus size={12} /> Save to recipe box</>}

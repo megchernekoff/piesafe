@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { BookOpen, Calendar, Home, Settings, Mail } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 import PieIcon from './icons/PieIcon'
+import InstallBanner from './InstallBanner'
 
 const NAV = [
   { href: '/dashboard',   icon: Home,     label: 'Home' },
@@ -48,7 +49,10 @@ export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number 
           </Link>
         ))}
         <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
-          <UserButton />
+          <InstallBanner />
+          <div style={{ marginTop: '0.75rem' }}>
+            <UserButton />
+          </div>
         </div>
       </nav>
 

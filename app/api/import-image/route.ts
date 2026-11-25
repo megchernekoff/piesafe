@@ -65,6 +65,17 @@ Return only valid JSON, no markdown, no extra text.`,
     return NextResponse.json({ error: 'Could not read a recipe from that image. Try a clearer photo.' }, { status: 422 })
   }
 
+  const dupe = await db.execute({
+    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND LOWER(title) = LOWER(?)',
+    args: [userId, recipe.title as string],
+  })
+  if (dupe.rows.length > 0) {
+    return NextResponse.json(
+      { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+      { status: 409 }
+    )
+  }
+
   await db.execute({
     sql: `INSERT INTO recipes
             (user_id, title, description, ingredients, instructions, tags, prep_time, cook_time, servings)

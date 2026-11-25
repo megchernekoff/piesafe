@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pie Safe — Product & Technical Summary</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #2a1e10;
+    background: #fff;
+    padding: 56px 64px;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: #2a1e10;
+    margin-bottom: 4px;
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: #8a7a6a;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e8dfc8;
+  }
+
+  h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: #2a1e10;
+    margin-top: 32px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e8dfc8;
+  }
+
+  h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #c8911a;
+    margin-top: 20px;
+    margin-bottom: 6px;
+  }
+
+  p {
+    margin-bottom: 10px;
+    color: #3d2e1c;
+  }
+
+  ul {
+    padding-left: 18px;
+    margin-bottom: 10px;
+  }
+
+  li {
+    margin-bottom: 4px;
+    color: #3d2e1c;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 12px;
+  }
+
+  th {
+    text-align: left;
+    padding: 7px 10px;
+    background: #f5edd8;
+    font-weight: 600;
+    color: #2a1e10;
+    border-bottom: 1px solid #e8dfc8;
+  }
+
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f0e8d4;
+    vertical-align: top;
+  }
+
+  td:first-child {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #c8911a;
+    white-space: nowrap;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .section { margin-bottom: 8px; }
+
+  @media print {
+    body { padding: 32px 40px; }
+    h2 { page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Pie Safe</h1>
+<p class="tagline">Product &amp; Technical Summary &mdash; November 2026</p>
+
+<h2>What It Is</h2>
+<p>Pie Safe is a personal meal planning web app designed around the full cooking lifecycle: discovering and saving recipes, planning a week of dinners, and generating a grocery list &mdash; all in one place. It is built for households (families, couples, individuals) who cook regularly and want less friction between &ldquo;what should we eat this week?&rdquo; and actually eating it. It has a particular focus on households with toddlers, offering adapted meal suggestions alongside adult versions.</p>
+
+<h2>What It Does Today</h2>
+
+<h3>Recipe Box</h3>
+<ul>
+  <li>Save recipes from any URL &mdash; Claude parses the page and extracts structured recipe data</li>
+  <li>Upload a photo of a cookbook page or recipe card &mdash; Claude reads and saves it</li>
+  <li>Describe a dish in plain text and Claude generates a full recipe (ingredients, steps, timing)</li>
+  <li>Chrome extension for one-click saving from any recipe site, including paywalled ones</li>
+  <li>Full recipe library with search, tags, and time estimates</li>
+</ul>
+
+<h3>Meal Planning</h3>
+<ul>
+  <li>AI-generated 5&ndash;7 night dinner plans, tailored to household size, dietary restrictions, dislikes, and free-text tweaks (&ldquo;nothing too heavy,&rdquo; &ldquo;use up the pork in the fridge&rdquo;)</li>
+  <li>Pin specific recipes from your box to guarantee they appear in the plan</li>
+  <li>Placeholder meals (e.g. &ldquo;pizza night&rdquo;) can be named and locked in</li>
+  <li>Toddler mode adds kid-friendly adaptation notes to every meal</li>
+  <li>Swap individual nights without regenerating the whole plan</li>
+  <li>Conversational plan refinement via chat</li>
+</ul>
+
+<h3>Grocery List</h3>
+<ul>
+  <li>Auto-generated from the meal plan, organized by category (produce, dairy, etc.)</li>
+  <li>Add custom items, check off and restore items; persists between sessions</li>
+</ul>
+
+<h3>The Digest</h3>
+<ul>
+  <li>Connects to Gmail (read-only OAuth) and scans food newsletters the user subscribes to</li>
+  <li>Supported sources: NYT Cooking, Bon App&eacute;tit, Serious Eats, Smitten Kitchen, Epicurious, Food52, Half Baked Harvest, Ina Garten, The Kitchn, Budget Bytes, King Arthur Baking, Simply Recipes, and more</li>
+  <li>Surfaces recipes from newsletter emails; users save individual recipes directly to their Recipe Box</li>
+  <li>Newsletter onboarding on the Digest page &mdash; users mark what they already subscribe to or link out to sign up</li>
+</ul>
+
+<h3>Onboarding</h3>
+<ul>
+  <li>Welcome screen &rarr; guided 9-step product tour (Recipe Box, Meal Plan, Digest)</li>
+  <li>Starter recipe picker: swipe-based card UI (&ldquo;dating app style&rdquo;) showing 10 curated recipes sampled across categories, filtered by dietary preferences</li>
+  <li>Gift recipe from the founder (Orange Glazed Chicken Breast) added automatically on first visit</li>
+  <li>Digest nudge tooltip after onboarding, reminding new users to connect their inbox</li>
+  <li>All onboarding state is scoped per user so multiple accounts in the same browser behave independently</li>
+</ul>
+
+<h3>User Preferences &amp; Account</h3>
+<ul>
+  <li>Household size, dietary restrictions (vegetarian, vegan, gluten-free, dairy-free, nut-free, halal, kosher), ingredients to avoid</li>
+  <li>Toddler mode with age in months</li>
+  <li>Full account deletion: wipes all user data from the database and deletes the account</li>
+</ul>
+
+<h2>Room for Growth</h2>
+
+<h3>Near-Term Product</h3>
+<ul>
+  <li>Mobile-optimized experience / native app (currently web-only, responsive but not native)</li>
+  <li>Recipe rating and personal notes (&ldquo;made this, would add more lemon next time&rdquo;)</li>
+  <li>Pantry / &ldquo;what&rsquo;s in the fridge&rdquo; mode that generates plans around existing ingredients</li>
+  <li>Meal history to avoid repetition across weeks</li>
+  <li>Recipe scaling (adjust servings dynamically)</li>
+  <li>Nutritional estimates per meal and per week</li>
+</ul>
+
+<h3>Monetization</h3>
+<ul>
+  <li>Freemium tier: free for basic recipe box and limited plan generations; paid for unlimited AI use, Digest, and advanced features</li>
+  <li>Household / family plan: shared recipe box and meal plans across multiple users</li>
+  <li>Grocery delivery integration: Instacart, AmazonFresh, etc. from the grocery list</li>
+  <li>Newsletter partnerships: featured onboarding placements with referral arrangements</li>
+</ul>
+
+<h3>Platform Expansion</h3>
+<ul>
+  <li>Voice: &ldquo;What&rsquo;s for dinner tonight?&rdquo; via Alexa / Google Home, reading from the active plan</li>
+  <li>Sharing: publish a recipe or week&rsquo;s plan publicly or to a specific person</li>
+  <li>Community layer: save recipes others have published, follow cooks you trust</li>
+  <li>API for third-party integrations (smart fridges, grocery apps)</li>
+</ul>
+
+<h2>How It Works &mdash; Technical</h2>
+
+<h3>Stack</h3>
+<ul>
+  <li><strong>Framework:</strong> Next.js 16 (App Router, TypeScript &mdash; server and client components)</li>
+  <li><strong>Auth:</strong> Clerk v7 &mdash; sign-up, sign-in, session management. All data scoped to Clerk <code>user_id</code>.</li>
+  <li><strong>Database:</strong> Turso (hosted libsql / SQLite-compatible). Schema managed in code via idempotent <code>CREATE TABLE IF NOT EXISTS</code> with additive <code>ALTER TABLE</code> migrations.</li>
+  <li><strong>AI:</strong> Anthropic Claude API (claude-sonnet-4-6) &mdash; recipe parsing from URLs, photo OCR and extraction, freeform recipe generation, and streaming meal plan generation.</li>
+  <li><strong>Deployment:</strong> Render (web service). Custom domain pie-safe.com.</li>
+  <li><strong>Extension:</strong> Chrome Web Store extension for one-click recipe saving from any browser tab.</li>
+</ul>
+
+<h3>Data Model</h3>
+<table>
+  <tr><th>Table</th><th>Purpose</th></tr>
+  <tr><td>profiles</td><td>Per-user preferences: household size, dietary restrictions, dislikes, toddler mode</td></tr>
+  <tr><td>recipes</td><td>User recipe library &mdash; ingredients and instructions stored as JSON arrays</td></tr>
+  <tr><td>meal_plans</td><td>Generated plans with grocery list, prep notes, and AI rationale</td></tr>
+  <tr><td>meal_plan_days</td><td>Individual days within a plan (day number, dinner JSON)</td></tr>
+  <tr><td>starter_recipes</td><td>Global curated recipe pool for the onboarding swipe picker</td></tr>
+  <tr><td>gmail_tokens</td><td>OAuth tokens for Gmail integration (read-only)</td></tr>
+  <tr><td>gmail_providers</td><td>Which newsletter sources each user has added to their Digest</td></tr>
+  <tr><td>email_digests</td><td>Parsed newsletter emails with extracted recipe summaries</td></tr>
+</table>
+
+<h3>AI Integration</h3>
+<ul>
+  <li><strong>Meal plan generation</strong> streams via <code>ReadableStream</code> to avoid the 30-second hosting timeout. The client consumes the stream and the plan is parsed and saved to the database once streaming completes.</li>
+  <li><strong>Recipe import from URL</strong> sends page content to Claude and gets back structured JSON (title, ingredients, instructions, timing).</li>
+  <li><strong>Recipe from photo</strong> uses Claude&rsquo;s vision capability &mdash; image is uploaded and sent as base64.</li>
+  <li><strong>Recipe from description</strong> is a prompt-to-structured-JSON generation.</li>
+  <li><strong>Digest parsing</strong> scans Gmail via the Gmail API and sends email body to Claude for recipe extraction.</li>
+</ul>
+
+</body>
+</html>

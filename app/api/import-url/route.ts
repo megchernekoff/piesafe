@@ -114,6 +114,16 @@ export async function POST(req: NextRequest) {
             args: [recipeName, description, JSON.stringify(ingredients), JSON.stringify(instructions), JSON.stringify(tags), toMinutes(structured.prepTime), toMinutes(structured.cookTime), parseInt(String(structured.recipeYield || '0')) || null, updateId, userId],
           })
         } else {
+          const dupe = await db.execute({
+            sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND (LOWER(title) = LOWER(?) OR source_url = ?)',
+            args: [userId, recipeName, url],
+          })
+          if (dupe.rows.length > 0) {
+            return NextResponse.json(
+              { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+              { status: 409 }
+            )
+          }
           await db.execute({
             sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags, prep_time, cook_time, servings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [userId, recipeName, description, url, JSON.stringify(ingredients), JSON.stringify(instructions), JSON.stringify(tags), toMinutes(structured.prepTime), toMinutes(structured.cookTime), parseInt(String(structured.recipeYield || '0')) || null],
@@ -125,6 +135,16 @@ export async function POST(req: NextRequest) {
   }
 
   // Fall back to saving as bookmark with title + clean URL
+  const dupeBookmark = await db.execute({
+    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND source_url = ?',
+    args: [userId, cleanUrl],
+  })
+  if (dupeBookmark.rows.length > 0) {
+    return NextResponse.json(
+      { duplicate: true, existing: { id: dupeBookmark.rows[0].id, title: dupeBookmark.rows[0].title } },
+      { status: 409 }
+    )
+  }
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, source_url, ingredients, instructions, tags)
           VALUES (?, ?, ?, ?, ?, ?)`,

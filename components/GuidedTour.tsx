@@ -140,12 +140,12 @@ export default function GuidedTour() {
     if (!userId) return
     if (localStorage.getItem(`tour-complete-${userId}`)) return
 
-    // Check the DB before showing the tour — if the user already has recipes
-    // they're established (e.g. reinstalled the PWA, which wipes localStorage).
-    fetch('/api/recipes')
+    // Fall back to DB so the tour doesn't re-appear after localStorage is wiped
+    // (e.g. PWA reinstall, browser data clear, new device).
+    fetch('/api/preferences')
       .then(r => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data) && data.length > 0) {
+      .then((prefs: { tour_complete?: number } | null) => {
+        if (prefs?.tour_complete) {
           localStorage.setItem(`tour-complete-${userId}`, '1')
           return
         }
@@ -179,7 +179,14 @@ export default function GuidedTour() {
   }
 
   function complete() {
-    if (userId) localStorage.setItem(`tour-complete-${userId}`, '1')
+    if (userId) {
+      localStorage.setItem(`tour-complete-${userId}`, '1')
+      fetch('/api/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tour_complete: true }),
+      }).catch(() => {})
+    }
     setVisible(false)
     router.push('/dashboard')
   }

@@ -48,3 +48,18 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function PATCH(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { tour_complete } = await req.json()
+  if (tour_complete !== undefined) {
+    await db.execute({
+      sql: 'UPDATE profiles SET tour_complete = ? WHERE user_id = ?',
+      args: [tour_complete ? 1 : 0, userId],
+    })
+  }
+
+  return NextResponse.json({ success: true })
+}

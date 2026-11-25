@@ -128,4 +128,7 @@ export async function initializeSchema() {
       active       INTEGER NOT NULL DEFAULT 1
     )
   `)
+
+  // Migrations — safe to re-run; errors mean the column already exists
+  await db.execute(`ALTER TABLE profiles ADD COLUMN tour_complete INTEGER NOT NULL DEFAULT 0`).catch(() => {})
 }

@@ -66,6 +66,17 @@ Return only valid JSON, no markdown.`,
     return NextResponse.json({ error: 'Could not generate a recipe from that prompt.' }, { status: 500 })
   }
 
+  const dupe = await db.execute({
+    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND LOWER(title) = LOWER(?)',
+    args: [userId, recipe.title],
+  })
+  if (dupe.rows.length > 0) {
+    return NextResponse.json(
+      { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+      { status: 409 }
+    )
+  }
+
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, description, ingredients, instructions, tags, prep_time, cook_time, servings, toddler_notes)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

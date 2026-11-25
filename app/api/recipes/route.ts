@@ -36,6 +36,17 @@ export async function POST(req: NextRequest) {
 
   const { title, description, ingredients, instructions, prep_time, cook_time, servings, tags } = await req.json()
 
+  const dupe = await db.execute({
+    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND LOWER(title) = LOWER(?)',
+    args: [userId, title],
+  })
+  if (dupe.rows.length > 0) {
+    return NextResponse.json(
+      { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+      { status: 409 }
+    )
+  }
+
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, description, ingredients, instructions, prep_time, cook_time, servings, tags)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,

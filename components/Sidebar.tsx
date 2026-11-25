@@ -51,7 +51,7 @@ export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number 
         <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
           <button className="nav-item" style={{ width: '100%', marginBottom: '0.25rem' }}
             onClick={async () => {
-              const text = "I've been using Pie Safe for meal planning and thought you'd love it — it plans your whole week of dinners and builds the grocery list automatically. Try it: https://pie-safe.com"
+              const text = "I've been using Pie Safe for meal planning and thought you'd love it. You can use it to import recipes from anywhere and make meal plans for the week. Give it a try! https://pie-safe.com"
               if (typeof navigator.share === 'function') {
                 try { await navigator.share({ title: 'Join me on Pie Safe', text, url: 'https://pie-safe.com' }); return } catch { /* cancelled */ }
               }

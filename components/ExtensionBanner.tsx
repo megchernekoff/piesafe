@@ -7,6 +7,7 @@ export default function ExtensionBanner() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return
     if (!localStorage.getItem('extension-banner-dismissed')) setVisible(true)
   }, [])
 

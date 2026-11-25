@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import GuidedTour from '@/components/GuidedTour'
 import DigestNudge from '@/components/DigestNudge'
+import InstallBanner from '@/components/InstallBanner'
 import { db } from '@/lib/db'
 
 async function getUnreadDigestCount(userId: string): Promise<number> {
@@ -33,7 +34,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="app-shell">
       <Sidebar unreadDigests={unreadDigests} />
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <main className="main-content" style={{ flex: 1 }}>{children}</main>
+        <main className="main-content" style={{ flex: 1 }}>
+          <div className="mobile-install-banner">
+            <InstallBanner />
+          </div>
+          {children}
+        </main>
         <div style={{
           textAlign: 'center',
           padding: '0.75rem 1rem',

@@ -425,7 +425,14 @@ h1, h2, h3, .serif {
 
 /* ── Mobile responsive ── */
 
+.mobile-install-banner { display: none; }
+
 @media (max-width: 768px) {
+
+  .mobile-install-banner {
+    display: block;
+    margin-bottom: 0.75rem;
+  }
 
   /* Hide desktop sidebar */
   .sidebar {

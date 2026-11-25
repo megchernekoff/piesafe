@@ -20,6 +20,8 @@ export default function DigestNudge() {
         return
       }
       const r = el.getBoundingClientRect()
+      // Element is hidden (e.g. desktop sidebar on mobile) — don't show
+      if (r.width === 0 && r.height === 0) return
       setPos({ top: r.top + r.height / 2, left: r.right + 10 })
       setVisible(true)
     }

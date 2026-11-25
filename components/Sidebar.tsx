@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Calendar, Home, Settings, Mail } from 'lucide-react'
+import { BookOpen, Calendar, Home, Settings, Mail, Share2 } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 import PieIcon from './icons/PieIcon'
 import InstallBanner from './InstallBanner'
@@ -49,6 +49,17 @@ export default function Sidebar({ unreadDigests = 0 }: { unreadDigests?: number 
           </Link>
         ))}
         <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+          <button className="nav-item" style={{ width: '100%', marginBottom: '0.25rem' }}
+            onClick={async () => {
+              const text = "I've been using Pie Safe for meal planning and thought you'd love it — it plans your whole week of dinners and builds the grocery list automatically. Try it: https://pie-safe.com"
+              if (typeof navigator.share === 'function') {
+                try { await navigator.share({ title: 'Join me on Pie Safe', text, url: 'https://pie-safe.com' }); return } catch { /* cancelled */ }
+              }
+              navigator.clipboard.writeText(text)
+            }}>
+            <Share2 size={15} />
+            <span style={{ flex: 1 }}>Invite a friend</span>
+          </button>
           <InstallBanner />
           <div style={{ marginTop: '0.75rem' }}>
             <UserButton />

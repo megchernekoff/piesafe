@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Share2, Check } from 'lucide-react'
 
 interface Profile {
   display_name: string
@@ -20,6 +21,35 @@ const DEFAULT: Profile = {
   toddler_age: null,
   dislikes: [],
   dietary_restrictions: [],
+}
+
+function ShareSection() {
+  const [copied, setCopied] = useState(false)
+
+  async function invite() {
+    const text = "I've been using Pie Safe for meal planning and thought you'd love it — it plans your whole week of dinners and builds the grocery list automatically. Try it: https://pie-safe.com"
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: 'Join me on Pie Safe', text, url: 'https://pie-safe.com' })
+        return
+      } catch { /* user cancelled or not supported */ }
+    }
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  return (
+    <div style={{ maxWidth: '540px', marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--stone-dark)' }}>
+      <div className="section-label" style={{ marginBottom: '0.5rem' }}>Invite a friend</div>
+      <p style={{ fontSize: '0.85rem', color: 'var(--ink-light)', marginBottom: '1rem', lineHeight: 1.6 }}>
+        Know someone who'd love stress-free meal planning? Send them an invite.
+      </p>
+      <button className="btn-primary" onClick={invite} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+        {copied ? <><Check size={14} /> Link copied!</> : <><Share2 size={14} /> Send an invite</>}
+      </button>
+    </div>
+  )
 }
 
 export default function PreferencesPage() {
@@ -181,6 +211,9 @@ export default function PreferencesPage() {
           </button>
         </div>
       </form>
+
+      {/* Share */}
+      <ShareSection />
 
       {/* Danger zone */}
       <div style={{ maxWidth: '540px', marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--sand)' }}>

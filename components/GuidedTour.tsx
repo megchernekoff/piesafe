@@ -138,17 +138,27 @@ export default function GuidedTour() {
 
   useEffect(() => {
     if (!userId) return
-    if (!localStorage.getItem(`tour-complete-${userId}`)) {
-      setVisible(true)
-      // Stay on current page and show welcome screen first
-      if (!localStorage.getItem(`tour-gift-sent-${userId}`)) {
-        fetch('/api/recipes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(GIFT_RECIPE),
-        }).then(() => localStorage.setItem(`tour-gift-sent-${userId}`, '1')).catch(() => {})
-      }
-    }
+    if (localStorage.getItem(`tour-complete-${userId}`)) return
+
+    // Check the DB before showing the tour — if the user already has recipes
+    // they're established (e.g. reinstalled the PWA, which wipes localStorage).
+    fetch('/api/recipes')
+      .then(r => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data) && data.length > 0) {
+          localStorage.setItem(`tour-complete-${userId}`, '1')
+          return
+        }
+        setVisible(true)
+        if (!localStorage.getItem(`tour-gift-sent-${userId}`)) {
+          fetch('/api/recipes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(GIFT_RECIPE),
+          }).then(() => localStorage.setItem(`tour-gift-sent-${userId}`, '1')).catch(() => {})
+        }
+      })
+      .catch(() => {})
   }, [userId])
 
   useEffect(() => {

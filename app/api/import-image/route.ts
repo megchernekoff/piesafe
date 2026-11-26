@@ -54,7 +54,8 @@ Return a JSON object with exactly these fields:
   "prep_time": 15,
   "cook_time": 30,
   "servings": 4,
-  "tags": ["vegetarian", "quick", ...]
+  "tags": ["vegetarian", "quick", ...],
+  "notes": "Any margin notes, annotations, personal tips, or handwritten additions visible in the image — verbatim or paraphrased. null if none."
 }
 
 If any field isn't visible, use null for numbers or [] for arrays.
@@ -84,8 +85,8 @@ Return only valid JSON, no markdown, no extra text.`,
 
   await db.execute({
     sql: `INSERT INTO recipes
-            (user_id, title, description, ingredients, instructions, tags, prep_time, cook_time, servings)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (user_id, title, description, ingredients, instructions, tags, prep_time, cook_time, servings, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       userId,
       recipe.title as string,
@@ -96,6 +97,7 @@ Return only valid JSON, no markdown, no extra text.`,
       (recipe.prep_time as number) ?? null,
       (recipe.cook_time as number) ?? null,
       (recipe.servings as number) ?? null,
+      (recipe.notes as string) ?? null,
     ],
   })
 

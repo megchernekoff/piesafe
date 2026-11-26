@@ -15,6 +15,7 @@ interface Recipe {
   cook_time: number | null
   servings: number | null
   toddler_notes: string | null
+  notes: string | null
   created_at: string
 }
 
@@ -210,6 +211,13 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
             {recipe.instructions.map((step, i) => <li key={i} style={{ lineHeight: 1.6 }}>{step}</li>)}
           </ol>
         </div>
+
+        {recipe.notes && (
+          <div style={{ background: 'var(--stone)', borderRadius: 8, padding: '0.75rem 1rem', borderLeft: '3px solid var(--ochre)' }}>
+            <div className="section-label" style={{ marginBottom: '0.4rem' }}>Notes</div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ink-light)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{recipe.notes}</p>
+          </div>
+        )}
 
         </>
         )}

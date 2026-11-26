@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, ChevronRight, Clock } from 'lucide-react'
+import { Mail, ChevronRight, Clock, Camera, Link2, Sparkles, CalendarDays } from 'lucide-react'
 import { db } from '@/lib/db'
 import LavenderSprig from '@/components/icons/LavenderSprig'
 import ExtensionBanner from '@/components/ExtensionBanner'
@@ -87,6 +87,31 @@ export default async function DashboardPage() {
           <TimeGreeting name={name} />
         </h1>
         <p className="page-subtitle">Here&apos;s where things stand</p>
+      </div>
+
+      {/* Quick actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.75rem' }}>
+        {[
+          { href: '/recipes?tab=photo', icon: Camera, label: 'Add photo' },
+          { href: '/recipes?tab=url',   icon: Link2,  label: 'From URL' },
+          { href: '/recipes?tab=prompt',icon: Sparkles,label: 'From prompt' },
+          { href: '/plan',              icon: CalendarDays, label: 'Meal plan' },
+        ].map(({ href, icon: Icon, label }) => (
+          <Link key={href} href={href} style={{ textDecoration: 'none' }}>
+            <div style={{
+              background: 'var(--parchment)',
+              border: '1px solid var(--stone-dark)',
+              borderRadius: 12,
+              padding: '1rem 0.5rem',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+              cursor: 'pointer',
+              transition: 'border-color 0.15s',
+            }}>
+              <Icon size={22} style={{ color: 'var(--lavender)' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--ink-light)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+            </div>
+          </Link>
+        ))}
       </div>
 
       <ExtensionBanner />

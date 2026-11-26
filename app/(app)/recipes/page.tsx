@@ -449,7 +449,11 @@ export default function RecipesPage() {
   const [q, setQ] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [selected, setSelected] = useState<Recipe | null>(null)
-  const [importTab, setImportTab] = useState<ImportTab>('url')
+  const [importTab, setImportTab] = useState<ImportTab>(() => {
+    if (typeof window === 'undefined') return 'url'
+    const p = new URLSearchParams(window.location.search).get('tab')
+    return (p === 'photo' || p === 'prompt') ? p : 'url'
+  })
 
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)

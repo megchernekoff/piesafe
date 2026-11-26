@@ -118,7 +118,8 @@ Return only valid JSON, no markdown, no extra text.`,
 
   return NextResponse.json({ success: true, recipe })
   } catch (err) {
-    console.error('import-image error:', err)
-    return NextResponse.json({ error: 'Something went wrong importing that image.' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('import-image error:', msg)
+    return NextResponse.json({ error: `Import failed: ${msg.slice(0, 120)}` }, { status: 500 })
   }
 }

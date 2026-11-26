@@ -88,15 +88,14 @@ export default async function DashboardPage() {
         <h1 className="page-title">
           <TimeGreeting name={name} />
         </h1>
-        <p className="page-subtitle">Here&apos;s where things stand</p>
+        <p className="page-subtitle">Let&apos;s get cooking</p>
       </div>
 
+      <div className="section-label" style={{ marginBottom: '0.6rem' }}>Add a recipe</div>
       <QuickActions />
       <ExtensionBanner />
 
       <FunFact />
-
-      {/* Digest alert */}
       {unreadDigests > 0 && (
         <Link href="/digest" style={{ textDecoration: 'none', display: 'block', marginBottom: '1.25rem' }}>
           <div style={{ background: 'var(--lavender-soft)', border: '1px solid var(--lavender)', borderRadius: 10, padding: '0.85rem 1.1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -110,7 +109,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Tonight's dinner */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem', marginTop: '2rem' }}>
         <div className="section-label" style={{ marginBottom: '0.6rem' }}>Tonight&apos;s dinner</div>
         {todayDinner ? (
           <Link href="/plan" style={{ textDecoration: 'none' }}>

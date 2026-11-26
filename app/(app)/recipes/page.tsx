@@ -450,6 +450,27 @@ export default function RecipesPage() {
     }
   }
 
+  function normalizeToJpeg(file: File): Promise<File> {
+    const supported = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (supported.includes(file.type)) return Promise.resolve(file)
+    return new Promise(resolve => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d')?.drawImage(img, 0, 0)
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(url)
+          resolve(blob ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : file)
+        }, 'image/jpeg', 0.92)
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+      img.src = url
+    })
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(e.target.files || [])
     if (!incoming.length) return
@@ -473,8 +494,9 @@ export default function RecipesPage() {
     setImportingPhoto(true)
     setPhotoError('')
     try {
+      const normalized = await Promise.all(imageFiles.map(normalizeToJpeg))
       const form = new FormData()
-      imageFiles.forEach(f => form.append('images', f))
+      normalized.forEach(f => form.append('images', f))
       const res = await fetch('/api/import-image', { method: 'POST', body: form })
       const data = await res.json()
       if (data.duplicate) {

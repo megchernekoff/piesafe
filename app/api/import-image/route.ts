@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import sharp from 'sharp'
 import { db } from '@/lib/db'
 
 const anthropic = new Anthropic()
@@ -23,10 +24,16 @@ export async function POST(req: NextRequest) {
 
   const imageBlocks = await Promise.all(
     files.map(async (file) => {
-      const bytes = await file.arrayBuffer()
-      const base64 = Buffer.from(bytes).toString('base64')
-      const mediaType = (file.type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
-      return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data: base64 } }
+      const bytes = Buffer.from(await file.arrayBuffer())
+      // Auto-rotate from EXIF, resize to max 1500px, convert to JPEG
+      // This handles sideways photos, HEIC, and large files from iOS cameras
+      const processed = await sharp(bytes)
+        .rotate()
+        .resize(1500, 1500, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer()
+      const base64 = processed.toString('base64')
+      return { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 } }
     })
   )
 

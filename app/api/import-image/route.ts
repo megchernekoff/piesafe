@@ -15,6 +15,7 @@ function extractJSON(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -25,15 +26,22 @@ export async function POST(req: NextRequest) {
   const imageBlocks = await Promise.all(
     files.map(async (file) => {
       const bytes = Buffer.from(await file.arrayBuffer())
-      // Auto-rotate from EXIF, resize to max 1500px, convert to JPEG
-      // This handles sideways photos, HEIC, and large files from iOS cameras
-      const processed = await sharp(bytes)
-        .rotate()
-        .resize(1500, 1500, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 85 })
-        .toBuffer()
-      const base64 = processed.toString('base64')
-      return { type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 } }
+      let base64: string
+      let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg'
+      try {
+        // Auto-rotate from EXIF, resize to max 1500px, convert to JPEG
+        const processed = await sharp(bytes)
+          .rotate()
+          .resize(1500, 1500, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer()
+        base64 = processed.toString('base64')
+      } catch {
+        // sharp unavailable or unsupported format — send raw
+        base64 = bytes.toString('base64')
+        mediaType = (file.type || 'image/jpeg') as typeof mediaType
+      }
+      return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data: base64 } }
     })
   )
 
@@ -109,4 +117,8 @@ Return only valid JSON, no markdown, no extra text.`,
   })
 
   return NextResponse.json({ success: true, recipe })
+  } catch (err) {
+    console.error('import-image error:', err)
+    return NextResponse.json({ error: 'Something went wrong importing that image.' }, { status: 500 })
+  }
 }

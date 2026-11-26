@@ -110,7 +110,7 @@ export default async function DashboardPage() {
 
       {/* Tonight's dinner */}
       <div style={{ marginBottom: '1.5rem', marginTop: '2rem' }}>
-        <div className="section-label" style={{ marginBottom: '0.6rem' }}>Tonight&apos;s dinner</div>
+        <div className="section-label" style={{ marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>🍳 Tonight&apos;s dinner</div>
         {todayDinner ? (
           <Link href="/plan" style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
@@ -144,7 +144,7 @@ export default async function DashboardPage() {
       {recentRecipes.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-            <div className="section-label">Recently saved</div>
+            <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>🗒️ Recently saved</div>
             <Link href="/recipes" style={{ fontSize: '0.78rem', color: 'var(--lavender)', textDecoration: 'none' }}>See all →</Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>

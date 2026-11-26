@@ -150,23 +150,21 @@ export default function FunFact() {
   if (!tip) return null
 
   return (
-    <div style={{
-      marginTop: '2rem',
-      background: 'var(--parchment)',
-      border: '1px solid var(--stone-dark)',
-      borderRadius: 12,
-      padding: '1rem 1.1rem',
-    }}>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
-        <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '0.05rem' }}>🥄</span>
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ochre)', marginBottom: '0.3rem' }}>Food for Thought</div>
-          <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.65, marginBottom: '0.4rem' }}>{tip.text}</p>
-          <p style={{ fontSize: '0.7rem', color: 'var(--ink-light)', opacity: 0.6, fontStyle: 'italic' }}>— {tip.source}</p>
-        </div>
+    <div style={{ marginTop: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+        <span style={{ fontSize: '1rem' }}>🥄</span>
+        <div className="section-label">Food for Thought</div>
       </div>
+      <div style={{
+        background: 'var(--parchment)',
+        border: '1px solid var(--stone-dark)',
+        borderRadius: 12,
+        padding: '1rem 1.1rem',
+      }}>
+        <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.65, marginBottom: '0.4rem' }}>{tip.text}</p>
+        <p style={{ fontSize: '0.7rem', color: 'var(--ink-light)', opacity: 0.6, fontStyle: 'italic', marginBottom: '1rem' }}>— {tip.source}</p>
 
-      {submitted ? (
+        {submitted ? (
         <p style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Check size={13} /> Thanks — we'll add it to the collection!
         </p>
@@ -194,7 +192,8 @@ export default function FunFact() {
             </button>
           </div>
         </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

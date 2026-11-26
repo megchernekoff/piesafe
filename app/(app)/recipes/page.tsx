@@ -450,21 +450,26 @@ export default function RecipesPage() {
     }
   }
 
+  // Resize to max 1500px and convert to JPEG before upload.
+  // Keeps file size small regardless of source format (HEIC, PNG, large JPEG).
   function normalizeToJpeg(file: File): Promise<File> {
-    const supported = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (supported.includes(file.type)) return Promise.resolve(file)
     return new Promise(resolve => {
       const img = new Image()
       const url = URL.createObjectURL(file)
       img.onload = () => {
+        const MAX = 1500
+        let w = img.naturalWidth, h = img.naturalHeight
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+          else { w = Math.round(w * MAX / h); h = MAX }
+        }
         const canvas = document.createElement('canvas')
-        canvas.width = img.naturalWidth
-        canvas.height = img.naturalHeight
-        canvas.getContext('2d')?.drawImage(img, 0, 0)
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d')?.drawImage(img, 0, 0, w, h)
         canvas.toBlob(blob => {
           URL.revokeObjectURL(url)
           resolve(blob ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : file)
-        }, 'image/jpeg', 0.92)
+        }, 'image/jpeg', 0.88)
       }
       img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
       img.src = url

@@ -94,6 +94,8 @@ export default async function DashboardPage() {
       <QuickActions />
       <ExtensionBanner />
 
+      <FunFact />
+
       {/* Digest alert */}
       {unreadDigests > 0 && (
         <Link href="/digest" style={{ textDecoration: 'none', display: 'block', marginBottom: '1.25rem' }}>
@@ -185,7 +187,6 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
-      <FunFact />
     </div>
   )
 }

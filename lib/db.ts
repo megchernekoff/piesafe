@@ -134,6 +134,7 @@ export async function initializeSchema() {
       id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
       user_id    TEXT NOT NULL,
       tip        TEXT NOT NULL,
+      submitter  TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)

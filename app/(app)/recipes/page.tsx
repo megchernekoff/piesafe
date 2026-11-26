@@ -428,21 +428,26 @@ export default function RecipesPage() {
     if (!importUrl.trim()) return
     setImporting(true)
     setImportError('')
-    const res = await fetch('/api/import-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: importUrl }),
-    })
-    const data = await res.json()
-    if (data.duplicate) {
-      setImportError(`You already have "${data.existing.title}" in your recipe box.`)
-    } else if (data.error) {
-      setImportError(data.error)
-    } else {
-      setImportUrl('')
-      load()
+    try {
+      const res = await fetch('/api/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl }),
+      })
+      const data = await res.json()
+      if (data.duplicate) {
+        setImportError(`You already have "${data.existing.title}" in your recipe box.`)
+      } else if (data.error) {
+        setImportError(data.error)
+      } else {
+        setImportUrl('')
+        load()
+      }
+    } catch {
+      setImportError('Something went wrong — try again.')
+    } finally {
+      setImporting(false)
     }
-    setImporting(false)
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -467,20 +472,25 @@ export default function RecipesPage() {
     if (!imageFiles.length) return
     setImportingPhoto(true)
     setPhotoError('')
-    const form = new FormData()
-    imageFiles.forEach(f => form.append('images', f))
-    const res = await fetch('/api/import-image', { method: 'POST', body: form })
-    const data = await res.json()
-    if (data.duplicate) {
-      setPhotoError(`You already have "${data.existing.title}" in your recipe box.`)
-    } else if (data.error) {
-      setPhotoError(data.error)
-    } else {
-      setImageFiles([])
-      setImagePreviews([])
-      load()
+    try {
+      const form = new FormData()
+      imageFiles.forEach(f => form.append('images', f))
+      const res = await fetch('/api/import-image', { method: 'POST', body: form })
+      const data = await res.json()
+      if (data.duplicate) {
+        setPhotoError(`You already have "${data.existing.title}" in your recipe box.`)
+      } else if (data.error) {
+        setPhotoError(data.error)
+      } else {
+        setImageFiles([])
+        setImagePreviews([])
+        load()
+      }
+    } catch {
+      setPhotoError('Something went wrong — try again.')
+    } finally {
+      setImportingPhoto(false)
     }
-    setImportingPhoto(false)
   }
 
   async function handlePromptSend() {

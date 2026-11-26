@@ -455,6 +455,23 @@ export default function RecipesPage() {
     return (p === 'photo' || p === 'prompt') ? p : 'url'
   })
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('fromCamera') !== '1') return
+    try {
+      const stored = sessionStorage.getItem('quick-camera-photo')
+      if (!stored) return
+      sessionStorage.removeItem('quick-camera-photo')
+      const { data, name, type } = JSON.parse(stored)
+      const arr = data.split(',')[1]
+      const bytes = Uint8Array.from(atob(arr), c => c.charCodeAt(0))
+      const file = new File([bytes], name || 'photo.jpg', { type: type || 'image/jpeg' })
+      setImageFiles([file])
+      setImagePreviews([data])
+    } catch { /* ignore */ }
+  }, [])
+
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')

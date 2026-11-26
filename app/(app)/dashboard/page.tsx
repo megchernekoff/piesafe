@@ -1,12 +1,14 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, ChevronRight, Clock, Camera, Link2, Sparkles, CalendarDays } from 'lucide-react'
+import { Mail, ChevronRight, Clock } from 'lucide-react'
 import { db } from '@/lib/db'
 import LavenderSprig from '@/components/icons/LavenderSprig'
 import ExtensionBanner from '@/components/ExtensionBanner'
 import StarterRecipePicker from '@/components/StarterRecipePicker'
 import TimeGreeting from '@/components/TimeGreeting'
+import QuickActions from '@/components/QuickActions'
+import FunFact from '@/components/FunFact'
 
 export default async function DashboardPage() {
   const { userId } = await auth()
@@ -37,7 +39,7 @@ export default async function DashboardPage() {
       args: [userId],
     }),
     db.execute({
-      sql: 'SELECT title, description, tags, prep_time, cook_time FROM recipes WHERE user_id = ? ORDER BY created_at DESC LIMIT 4',
+      sql: 'SELECT title, description, tags, prep_time, cook_time FROM recipes WHERE user_id = ? ORDER BY created_at DESC LIMIT 3',
       args: [userId],
     }),
     db.execute({ sql: 'SELECT COUNT(*) as count FROM recipes WHERE user_id = ?', args: [userId] }),
@@ -89,31 +91,7 @@ export default async function DashboardPage() {
         <p className="page-subtitle">Here&apos;s where things stand</p>
       </div>
 
-      {/* Quick actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.75rem' }}>
-        {[
-          { href: '/recipes?tab=photo', icon: Camera, label: 'Add photo' },
-          { href: '/recipes?tab=url',   icon: Link2,  label: 'From URL' },
-          { href: '/recipes?tab=prompt',icon: Sparkles,label: 'From prompt' },
-          { href: '/plan',              icon: CalendarDays, label: 'Meal plan' },
-        ].map(({ href, icon: Icon, label }) => (
-          <Link key={href} href={href} style={{ textDecoration: 'none' }}>
-            <div style={{
-              background: 'var(--parchment)',
-              border: '1px solid var(--stone-dark)',
-              borderRadius: 12,
-              padding: '1rem 0.5rem',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-              cursor: 'pointer',
-              transition: 'border-color 0.15s',
-            }}>
-              <Icon size={22} style={{ color: 'var(--lavender)' }} />
-              <span style={{ fontSize: '0.72rem', color: 'var(--ink-light)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
-
+      <QuickActions />
       <ExtensionBanner />
 
       {/* Digest alert */}
@@ -131,11 +109,12 @@ export default async function DashboardPage() {
 
       {/* Tonight's dinner */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div className="section-label" style={{ marginBottom: '0.6rem' }}>Tonight</div>
+        <div className="section-label" style={{ marginBottom: '0.6rem' }}>Tonight&apos;s dinner</div>
         {todayDinner ? (
           <Link href="/plan" style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ink-light)', marginBottom: '0.3rem' }}>From your meal plan</div>
                 <h3 className="serif" style={{ fontSize: '1.4rem', fontWeight: 300, marginBottom: '0.3rem' }}>{todayDinner.title}</h3>
                 {todayDinner.description && (
                   <p style={{ fontSize: '0.85rem', color: 'var(--ink-light)', lineHeight: 1.55 }}>{todayDinner.description}</p>
@@ -151,11 +130,10 @@ export default async function DashboardPage() {
           <Link href="/plan" style={{ textDecoration: 'none' }}>
             <div className="card" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)', fontStyle: 'italic' }}>
-                  No plan yet — generate this week&apos;s dinners in about 30 seconds.
-                </p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--ink)', marginBottom: '0.2rem', fontWeight: 500 }}>No plan yet this week.</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)' }}>Build one and dinner figures itself out.</p>
               </div>
-              <button className="btn-primary" style={{ fontSize: '0.82rem', flexShrink: 0 }}>Generate plan →</button>
+              <button className="btn-primary" style={{ fontSize: '0.82rem', flexShrink: 0, whiteSpace: 'nowrap' }}>Build one →</button>
             </div>
           </Link>
         )}
@@ -207,6 +185,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+      <FunFact />
     </div>
   )
 }

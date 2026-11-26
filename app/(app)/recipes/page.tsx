@@ -450,9 +450,9 @@ export default function RecipesPage() {
     }
   }
 
-  // Resize to max 1500px and convert to JPEG before upload.
-  // Keeps file size small regardless of source format (HEIC, PNG, large JPEG).
-  function normalizeToJpeg(file: File): Promise<File> {
+  // Returns null if the file is HEIC and can't be decoded (e.g. Chrome on Mac).
+  function normalizeToJpeg(file: File): Promise<File | null> {
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')
     return new Promise(resolve => {
       const img = new Image()
       const url = URL.createObjectURL(file)
@@ -471,7 +471,10 @@ export default function RecipesPage() {
           resolve(blob ? new File([blob], 'photo.jpg', { type: 'image/jpeg' }) : file)
         }, 'image/jpeg', 0.88)
       }
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(isHeic ? null : file)
+      }
       img.src = url
     })
   }
@@ -500,8 +503,12 @@ export default function RecipesPage() {
     setPhotoError('')
     try {
       const normalized = await Promise.all(imageFiles.map(normalizeToJpeg))
+      if (normalized.some(f => f === null)) {
+        setPhotoError('HEIC photos can\'t be uploaded directly from a Mac. Open the photo in Preview → File → Export → JPEG, then upload that file.')
+        return
+      }
       const form = new FormData()
-      normalized.forEach(f => form.append('images', f))
+      normalized.forEach(f => form.append('images', f as File))
       const res = await fetch('/api/import-image', { method: 'POST', body: form })
       const data = await res.json()
       if (data.duplicate) {

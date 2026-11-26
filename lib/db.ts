@@ -129,6 +129,15 @@ export async function initializeSchema() {
     )
   `)
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cooking_tips (
+      id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id    TEXT NOT NULL,
+      tip        TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `)
+
   // Migrations — safe to re-run; errors mean the column already exists
   await db.execute(`ALTER TABLE profiles ADD COLUMN tour_complete INTEGER NOT NULL DEFAULT 0`).catch(() => {})
   await db.execute(`ALTER TABLE recipes ADD COLUMN notes TEXT`).catch(() => {})

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Send, Check } from 'lucide-react'
 
 const TIPS = [
   // Heat & pan
@@ -121,12 +122,28 @@ const TIPS = [
 
 export default function FunFact() {
   const [tip, setTip] = useState('')
+  const [input, setInput] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     const today = new Date()
     const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()
     setTip(TIPS[seed % TIPS.length])
   }, [])
+
+  async function submit() {
+    if (!input.trim() || submitting) return
+    setSubmitting(true)
+    await fetch('/api/cooking-tips', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tip: input.trim() }),
+    })
+    setSubmitting(false)
+    setSubmitted(true)
+    setInput('')
+  }
 
   if (!tip) return null
 
@@ -137,15 +154,44 @@ export default function FunFact() {
       border: '1px solid var(--stone-dark)',
       borderRadius: 12,
       padding: '1rem 1.1rem',
-      display: 'flex',
-      gap: '0.75rem',
-      alignItems: 'flex-start',
     }}>
-      <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '0.05rem' }}>🥄</span>
-      <div>
-        <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ochre)', marginBottom: '0.3rem' }}>Food for Thought</div>
-        <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.65 }}>{tip}</p>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+        <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '0.05rem' }}>🥄</span>
+        <div>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ochre)', marginBottom: '0.3rem' }}>Food for Thought</div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.65 }}>{tip}</p>
+        </div>
       </div>
+
+      {submitted ? (
+        <p style={{ fontSize: '0.78rem', color: 'var(--olive)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Check size={13} /> Thanks — we'll add it to the collection!
+        </p>
+      ) : (
+        <div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--ink-light)', marginBottom: '0.4rem' }}>Have a tip of your own?</div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1 }}>
+              <textarea
+                className="textarea"
+                value={input}
+                onChange={e => setInput(e.target.value.slice(0, 300))}
+                onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) submit() }}
+                placeholder="Share a cooking tip…"
+                style={{ fontSize: '0.82rem', minHeight: '60px', resize: 'none' }}
+              />
+              <div style={{ fontSize: '0.68rem', color: 'var(--ink-light)', textAlign: 'right', marginTop: '0.2rem' }}>
+                {input.length}/300
+              </div>
+            </div>
+            <button className="btn-primary" onClick={submit}
+              disabled={submitting || !input.trim()}
+              style={{ padding: '0.65rem 0.85rem', flexShrink: 0, marginBottom: '1.4rem' }}>
+              <Send size={13} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

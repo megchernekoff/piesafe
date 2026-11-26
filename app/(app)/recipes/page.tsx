@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import ExtensionBanner from '@/components/ExtensionBanner'
-import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink, Send } from 'lucide-react'
+import { BookOpen, Link2, Loader2, Search, Trash2, X, Camera, Upload, ExternalLink, Send, Share2, Check } from 'lucide-react'
 
 interface Recipe {
   id: string
@@ -65,6 +65,7 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
   const originalServings = recipe.servings ?? 4
   const scale = servings / originalServings
   const isEmpty = recipe.ingredients.length === 0 && recipe.source_url
+  const [shared, setShared] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(recipe.title)
   const [editDesc, setEditDesc] = useState(recipe.description || '')
@@ -84,6 +85,29 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
     onRefresh({ ...recipe, title: editTitle, description: editDesc, ingredients, instructions })
     setEditing(false)
     setSaving(false)
+  }
+
+  async function shareRecipe() {
+    const lines: string[] = [recipe.title]
+    if (recipe.description) lines.push('', recipe.description)
+    if (recipe.ingredients.length) {
+      lines.push('', 'Ingredients:')
+      recipe.ingredients.forEach(i => lines.push(`• ${i}`))
+    }
+    if (recipe.instructions.length) {
+      lines.push('', 'Instructions:')
+      recipe.instructions.forEach((s, i) => lines.push(`${i + 1}. ${s}`))
+    }
+    if (recipe.notes) lines.push('', `Notes: ${recipe.notes}`)
+    lines.push('', '— Shared from Pie Safe (pie-safe.com)')
+    const text = lines.join('\n')
+
+    if (typeof navigator.share === 'function') {
+      try { await navigator.share({ title: recipe.title, text }); return } catch { /* cancelled */ }
+    }
+    await navigator.clipboard.writeText(text)
+    setShared(true)
+    setTimeout(() => setShared(false), 2500)
   }
 
   async function handleDelete() {
@@ -118,7 +142,10 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
               {recipe.tags.map(t => <span key={t} className="tag">{t}</span>)}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+            <button className="btn-ghost" onClick={shareRecipe} style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              {shared ? <><Check size={13} /> Copied</> : <><Share2 size={13} /> Share</>}
+            </button>
             <button className="btn-ghost" onClick={() => setEditing(e => !e)} style={{ fontSize: '0.78rem' }}>
               {editing ? 'Cancel' : '✎ Edit'}
             </button>

@@ -71,7 +71,15 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
   const [editDesc, setEditDesc] = useState(recipe.description || '')
   const [editIngredients, setEditIngredients] = useState(recipe.ingredients.join('\n'))
   const [editInstructions, setEditInstructions] = useState(recipe.instructions.join('\n'))
+  const [editTags, setEditTags] = useState(recipe.tags)
+  const [tagInput, setTagInput] = useState('')
   const [saving, setSaving] = useState(false)
+
+  function addTag() {
+    const t = tagInput.trim().toLowerCase()
+    if (t && !editTags.includes(t)) setEditTags(prev => [...prev, t])
+    setTagInput('')
+  }
 
   async function saveEdits() {
     setSaving(true)
@@ -80,9 +88,9 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
     await fetch('/api/recipes', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: recipe.id, title: editTitle, description: editDesc, ingredients, instructions, tags: recipe.tags, prep_time: recipe.prep_time, cook_time: recipe.cook_time, servings: recipe.servings }),
+      body: JSON.stringify({ id: recipe.id, title: editTitle, description: editDesc, ingredients, instructions, tags: editTags, prep_time: recipe.prep_time, cook_time: recipe.cook_time, servings: recipe.servings }),
     })
-    onRefresh({ ...recipe, title: editTitle, description: editDesc, ingredients, instructions })
+    onRefresh({ ...recipe, title: editTitle, description: editDesc, ingredients, instructions, tags: editTags })
     setEditing(false)
     setSaving(false)
   }
@@ -163,6 +171,25 @@ function RecipePanel({ recipe, onClose, onDelete, onRefresh }: { recipe: Recipe;
               <div className="section-label" style={{ marginBottom: '0.4rem' }}>Description</div>
               <input className="input" value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="One sentence description" />
             </div>
+            <div>
+              <div className="section-label" style={{ marginBottom: '0.5rem' }}>Tags</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                {editTags.map(t => (
+                  <span key={t} className="tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'default' }}>
+                    {t}
+                    <button onClick={() => setEditTags(prev => prev.filter(x => x !== t))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: 'inherit', opacity: 0.6 }}>×</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input className="input" value={tagInput} onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+                  placeholder="Add a tag…" style={{ flex: 1, fontSize: '0.85rem' }} />
+                <button className="btn-secondary" onClick={addTag} style={{ fontSize: '0.82rem' }}>Add</button>
+              </div>
+            </div>
+
             {recipe.ingredients.length > 0 && (
               <>
                 <div>
@@ -420,6 +447,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
+  const [activeTag, setActiveTag] = useState<string | null>(null)
   const [selected, setSelected] = useState<Recipe | null>(null)
   const [importTab, setImportTab] = useState<ImportTab>('url')
 
@@ -857,11 +885,33 @@ export default function RecipesPage() {
       </div>
 
       {/* Search */}
-      <div style={{ position: 'relative', maxWidth: '360px', marginBottom: '1.5rem' }}>
+      <div style={{ position: 'relative', maxWidth: '360px', marginBottom: '1rem' }}>
         <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-light)' }} />
         <input className="input" style={{ paddingLeft: '2rem' }}
           placeholder="Search recipes…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
+
+      {/* Tag filter chips */}
+      {!loading && recipes.length > 0 && (() => {
+        const allTags = [...new Set(recipes.flatMap(r => r.tags))].sort()
+        if (!allTags.length) return null
+        return (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+            <button onClick={() => setActiveTag(null)}
+              className={activeTag === null ? 'btn-primary' : 'btn-secondary'}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: 20 }}>
+              All
+            </button>
+            {allTags.map(t => (
+              <button key={t} onClick={() => setActiveTag(activeTag === t ? null : t)}
+                className={activeTag === t ? 'btn-primary' : 'btn-secondary'}
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: 20 }}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
 
       {loading && <div className="empty-state"><div className="spinner" style={{ width: 32, height: 32 }} /></div>}
 
@@ -874,7 +924,7 @@ export default function RecipesPage() {
       )}
 
       <div className="recipe-grid">
-        {recipes.map(r => {
+        {recipes.filter(r => !activeTag || r.tags.includes(activeTag)).map(r => {
           const isLink = r.source_url && r.ingredients.length === 0
           return (
             <div key={r.id} className="card"

@@ -56,6 +56,7 @@ Return a JSON object:
   "toddler_notes": null
 }
 Tags: 2-4 max. Use only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans, eggs, tofu…), dish type (soup, salad, stew, side dish, main dish, one pot, sheet pan…), or style (vegetarian, vegan, gluten-free, quick, low lift, one skillet, meal prep). Never tag minor ingredients.
+Always provide prep_time and cook_time in minutes — estimate based on the recipe, never null.
 Return only valid JSON, no markdown.`,
     }],
   })

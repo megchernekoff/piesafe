@@ -75,7 +75,7 @@ Return a JSON object with exactly these fields:
 }
 
 Tags: 2-4 max. Use only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans, eggs, tofu…), dish type (soup, salad, stew, side dish, main dish, one pot, sheet pan, casserole…), or style (vegetarian, vegan, gluten-free, quick, low lift, one skillet, meal prep). Never tag minor ingredients or generic words.
-If any field isn't visible, use null for numbers or [] for arrays.
+Always estimate prep_time and cook_time in minutes based on the recipe — never null. Use your knowledge of similar recipes if the image doesn't state them. Use null only for servings if truly unknown, [] for empty arrays.
 Return only valid JSON, no markdown, no extra text.`,
         },
       ],

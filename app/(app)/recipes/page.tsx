@@ -399,11 +399,13 @@ export default function RecipesPage() {
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
+  const [urlDuplicate, setUrlDuplicate] = useState<{ title: string; onConfirm: () => void } | null>(null)
 
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [importingPhoto, setImportingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState('')
+  const [photoDuplicate, setPhotoDuplicate] = useState<{ title: string; onConfirm: () => void } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [promptMessages, setPromptMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
@@ -413,6 +415,7 @@ export default function RecipesPage() {
   const [promptSaving, setPromptSaving] = useState(false)
   const [promptSaved, setPromptSaved] = useState(false)
   const [promptError, setPromptError] = useState('')
+  const [promptDuplicate, setPromptDuplicate] = useState<{ title: string; onConfirm: () => void } | null>(null)
   const promptBottomRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
@@ -424,23 +427,25 @@ export default function RecipesPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function handleImportUrl() {
+  async function handleImportUrl(force = false) {
     if (!importUrl.trim()) return
     setImporting(true)
     setImportError('')
+    setUrlDuplicate(null)
     try {
       const res = await fetch('/api/import-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: importUrl }),
+        body: JSON.stringify({ url: importUrl, force }),
       })
       const data = await res.json()
       if (data.duplicate) {
-        setImportError(`You already have "${data.existing.title}" in your recipe box.`)
+        setUrlDuplicate({ title: data.existing.title, onConfirm: () => handleImportUrl(true) })
       } else if (data.error) {
         setImportError(data.error)
       } else {
         setImportUrl('')
+        setUrlDuplicate(null)
         load()
       }
     } catch {
@@ -497,10 +502,11 @@ export default function RecipesPage() {
     setImagePreviews(prev => prev.filter((_, i) => i !== index))
   }
 
-  async function handleImportPhoto() {
+  async function handleImportPhoto(force = false) {
     if (!imageFiles.length) return
     setImportingPhoto(true)
     setPhotoError('')
+    setPhotoDuplicate(null)
     try {
       const normalized = await Promise.all(imageFiles.map(normalizeToJpeg))
       if (normalized.some(f => f === null)) {
@@ -509,15 +515,17 @@ export default function RecipesPage() {
       }
       const form = new FormData()
       normalized.forEach(f => form.append('images', f as File))
+      if (force) form.append('force', 'true')
       const res = await fetch('/api/import-image', { method: 'POST', body: form })
       const data = await res.json()
       if (data.duplicate) {
-        setPhotoError(`You already have "${data.existing.title}" in your recipe box.`)
+        setPhotoDuplicate({ title: data.existing.title, onConfirm: () => handleImportPhoto(true) })
       } else if (data.error) {
         setPhotoError(data.error)
       } else {
         setImageFiles([])
         setImagePreviews([])
+        setPhotoDuplicate(null)
         load()
       }
     } catch {
@@ -551,18 +559,18 @@ export default function RecipesPage() {
     setTimeout(() => promptBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
-  async function handlePromptSave() {
+  async function handlePromptSave(force = false) {
     if (!promptRecipe) return
     setPromptSaving(true)
     setPromptError('')
     const res = await fetch('/api/recipes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(promptRecipe),
+      body: JSON.stringify({ ...promptRecipe, force }),
     })
     const data = await res.json()
     if (data.duplicate) {
-      setPromptError(`You already have "${data.existing.title}" in your recipe box.`)
+      setPromptDuplicate({ title: data.existing.title, onConfirm: () => handlePromptSave(true) })
     } else if (data.error) {
       setPromptError(data.error)
     } else {
@@ -643,12 +651,19 @@ export default function RecipesPage() {
                 onKeyDown={e => e.key === 'Enter' && handleImportUrl()}
                 style={{ flex: 1 }}
               />
-              <button className="btn-primary" onClick={handleImportUrl} disabled={importing || !importUrl.trim()}>
+              <button className="btn-primary" onClick={() => handleImportUrl()} disabled={importing || !importUrl.trim()}>
                 {importing
                   ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Saving…</>
                   : <><Link2 size={14} /> Save</>}
               </button>
             </div>
+            {urlDuplicate && (
+              <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.5 }}>
+                Looks like you already have <strong>"{urlDuplicate.title}"</strong> in your recipe box. Want to add it anyway?{' '}
+                <button className="btn-ghost" style={{ fontSize: '0.82rem', color: 'var(--lavender)', textDecoration: 'underline', padding: 0 }}
+                  onClick={() => { setUrlDuplicate(null); urlDuplicate.onConfirm() }}>Add anyway</button>
+              </div>
+            )}
             {importError && (
               <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{importError}</p>
             )}
@@ -712,7 +727,7 @@ export default function RecipesPage() {
             <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileChange} />
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-primary" onClick={handleImportPhoto} disabled={importingPhoto || !imageFiles.length}>
+              <button className="btn-primary" onClick={() => handleImportPhoto()} disabled={importingPhoto || !imageFiles.length}>
                 {importingPhoto
                   ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Reading recipe…</>
                   : <><Camera size={14} /> Import {imageFiles.length > 1 ? `${imageFiles.length} pages` : 'photo'}</>}
@@ -721,6 +736,13 @@ export default function RecipesPage() {
                 <button className="btn-secondary" onClick={() => { setImageFiles([]); setImagePreviews([]) }}>Clear all</button>
               )}
             </div>
+            {photoDuplicate && (
+              <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.5 }}>
+                Looks like you already have <strong>"{photoDuplicate.title}"</strong> in your recipe box. Want to add it anyway?{' '}
+                <button className="btn-ghost" style={{ fontSize: '0.82rem', color: 'var(--lavender)', textDecoration: 'underline', padding: 0 }}
+                  onClick={() => { setPhotoDuplicate(null); photoDuplicate.onConfirm() }}>Add anyway</button>
+              </div>
+            )}
             {photoError && (
               <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem', marginTop: '0.6rem' }}>{photoError}</p>
             )}
@@ -762,7 +784,7 @@ export default function RecipesPage() {
                 <div style={{ fontSize: '0.72rem', color: 'var(--ochre)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Recipe ready</div>
                 <div className="serif" style={{ fontSize: '1.1rem', fontWeight: 400, marginBottom: '0.2rem' }}>{String(promptRecipe.title)}</div>
                 {!!promptRecipe.description && <p style={{ fontSize: '0.8rem', color: 'var(--ink-light)', marginBottom: '0.75rem', lineHeight: 1.5 }}>{String(promptRecipe.description)}</p>}
-                <button className="btn-primary" onClick={handlePromptSave}
+                <button className="btn-primary" onClick={() => handlePromptSave()}
                   disabled={promptSaving || promptSaved}
                   style={{ fontSize: '0.82rem' }}>
                   {promptSaved ? '✓ Saved to recipe box'
@@ -795,6 +817,13 @@ export default function RecipesPage() {
               </button>
             )}
 
+            {promptDuplicate && (
+              <div style={{ fontSize: '0.82rem', color: 'var(--ink-light)', lineHeight: 1.5 }}>
+                Looks like you already have <strong>"{promptDuplicate.title}"</strong> in your recipe box. Want to add it anyway?{' '}
+                <button className="btn-ghost" style={{ fontSize: '0.82rem', color: 'var(--lavender)', textDecoration: 'underline', padding: 0 }}
+                  onClick={() => { setPromptDuplicate(null); promptDuplicate.onConfirm() }}>Add anyway</button>
+              </div>
+            )}
             {promptError && <p style={{ color: 'var(--terracotta)', fontSize: '0.82rem' }}>{promptError}</p>}
           </div>
         )}

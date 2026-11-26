@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { prompt } = await req.json()
+  const { prompt, force } = await req.json()
   if (!prompt) return NextResponse.json({ error: 'Prompt required' }, { status: 400 })
 
   // Load user preferences so Claude can respect them
@@ -66,15 +66,17 @@ Return only valid JSON, no markdown.`,
     return NextResponse.json({ error: 'Could not generate a recipe from that prompt.' }, { status: 500 })
   }
 
-  const dupe = await db.execute({
-    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND LOWER(title) = LOWER(?)',
-    args: [userId, recipe.title],
-  })
-  if (dupe.rows.length > 0) {
-    return NextResponse.json(
-      { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
-      { status: 409 }
-    )
+  if (!force) {
+    const dupe = await db.execute({
+      sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND LOWER(title) = LOWER(?)',
+      args: [userId, recipe.title],
+    })
+    if (dupe.rows.length > 0) {
+      return NextResponse.json(
+        { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+        { status: 409 }
+      )
+    }
   }
 
   await db.execute({

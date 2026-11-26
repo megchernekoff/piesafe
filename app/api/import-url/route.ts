@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { url, updateId } = await req.json()
+  const { url, updateId, force } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 })
 
   // Strip tracking/UTM parameters — use just the canonical path
@@ -114,15 +114,17 @@ export async function POST(req: NextRequest) {
             args: [recipeName, description, JSON.stringify(ingredients), JSON.stringify(instructions), JSON.stringify(tags), toMinutes(structured.prepTime), toMinutes(structured.cookTime), parseInt(String(structured.recipeYield || '0')) || null, updateId, userId],
           })
         } else {
-          const dupe = await db.execute({
-            sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND (LOWER(title) = LOWER(?) OR source_url = ?)',
-            args: [userId, recipeName, url],
-          })
-          if (dupe.rows.length > 0) {
-            return NextResponse.json(
-              { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
-              { status: 409 }
-            )
+          if (!force) {
+            const dupe = await db.execute({
+              sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND (LOWER(title) = LOWER(?) OR source_url = ?)',
+              args: [userId, recipeName, url],
+            })
+            if (dupe.rows.length > 0) {
+              return NextResponse.json(
+                { duplicate: true, existing: { id: dupe.rows[0].id, title: dupe.rows[0].title } },
+                { status: 409 }
+              )
+            }
           }
           await db.execute({
             sql: `INSERT INTO recipes (user_id, title, description, source_url, ingredients, instructions, tags, prep_time, cook_time, servings) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -135,15 +137,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Fall back to saving as bookmark with title + clean URL
-  const dupeBookmark = await db.execute({
-    sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND source_url = ?',
-    args: [userId, cleanUrl],
-  })
-  if (dupeBookmark.rows.length > 0) {
-    return NextResponse.json(
-      { duplicate: true, existing: { id: dupeBookmark.rows[0].id, title: dupeBookmark.rows[0].title } },
-      { status: 409 }
-    )
+  if (!force) {
+    const dupeBookmark = await db.execute({
+      sql: 'SELECT id, title FROM recipes WHERE user_id = ? AND source_url = ?',
+      args: [userId, cleanUrl],
+    })
+    if (dupeBookmark.rows.length > 0) {
+      return NextResponse.json(
+        { duplicate: true, existing: { id: dupeBookmark.rows[0].id, title: dupeBookmark.rows[0].title } },
+        { status: 409 }
+      )
+    }
   }
   await db.execute({
     sql: `INSERT INTO recipes (user_id, title, source_url, ingredients, instructions, tags)

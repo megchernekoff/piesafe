@@ -132,9 +132,11 @@ export async function initializeSchema() {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS cooking_tips (
       id         TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-      user_id    TEXT NOT NULL,
+      user_id    TEXT NOT NULL DEFAULT 'system',
       tip        TEXT NOT NULL,
+      source     TEXT,
       submitter  TEXT,
+      curated    INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)
@@ -143,4 +145,6 @@ export async function initializeSchema() {
   await db.execute(`ALTER TABLE profiles ADD COLUMN tour_complete INTEGER NOT NULL DEFAULT 0`).catch(() => {})
   await db.execute(`ALTER TABLE recipes ADD COLUMN notes TEXT`).catch(() => {})
   await db.execute(`ALTER TABLE cooking_tips ADD COLUMN submitter TEXT`).catch(() => {})
+  await db.execute(`ALTER TABLE cooking_tips ADD COLUMN source TEXT`).catch(() => {})
+  await db.execute(`ALTER TABLE cooking_tips ADD COLUMN curated INTEGER NOT NULL DEFAULT 0`).catch(() => {})
 }

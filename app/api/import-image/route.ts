@@ -70,10 +70,11 @@ Return a JSON object with exactly these fields:
   "prep_time": 15,
   "cook_time": 30,
   "servings": 4,
-  "tags": ["vegetarian", "quick", ...],
+  "tags": ["chicken", "one pot"],
   "notes": "Any margin notes, annotations, personal tips, or handwritten additions visible in the image — verbatim or paraphrased. null if none."
 }
 
+Tags: 2-4 max. Use only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans, eggs, tofu…), dish type (soup, salad, stew, side dish, main dish, one pot, sheet pan, casserole…), or style (vegetarian, vegan, gluten-free, quick, low lift, one skillet, meal prep). Never tag minor ingredients or generic words.
 If any field isn't visible, use null for numbers or [] for arrays.
 Return only valid JSON, no markdown, no extra text.`,
         },

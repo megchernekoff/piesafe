@@ -111,8 +111,10 @@ ${dislikes.length ? `Never use: ${dislikes.join(', ')}.` : ''}
 ${toddlerMode ? 'Include toddler_notes for each meal.' : ''}
 ${tweaks ? `Notes: ${tweaks}` : ''}${placeholderBlock}${pinnedBlock}${savedBlock}
 
+Tags per meal: 2-4 max, only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans…), dish type (soup, salad, stew, side dish, one pot, sheet pan…), or style (vegetarian, quick, low lift, one skillet). Never tag minor ingredients.
+
 Return JSON only:
-{"rationale":"2 sentences","days":[{"day":"Day 1","dinner":{"title":"","description":"","prep_time":15,"cook_time":30,"servings":${householdSize},"ingredients":[""],"instructions":[""],"toddler_notes":null,"tags":[""]}}],"grocery_list":[{"item":"","amount":"","category":"produce"}],"prep_notes":[""]}`
+{"rationale":"2 sentences","days":[{"day":"Day 1","dinner":{"title":"","description":"","prep_time":15,"cook_time":30,"servings":${householdSize},"ingredients":[""],"instructions":[""],"toddler_notes":null,"tags":["chicken","one pot"]}}],"grocery_list":[{"item":"","amount":"","category":"produce"}],"prep_notes":[""]}`
 
   // Stream the response to avoid Render's 30s timeout
   const encoder = new TextEncoder()

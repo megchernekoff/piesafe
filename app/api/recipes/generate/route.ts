@@ -52,9 +52,10 @@ Return a JSON object:
   "prep_time": 15,
   "cook_time": 30,
   "servings": ${servings},
-  "tags": ["tag1", "tag2"],
+  "tags": ["chicken", "one pot"],
   "toddler_notes": null
 }
+Tags: 2-4 max. Use only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans, eggs, tofu…), dish type (soup, salad, stew, side dish, main dish, one pot, sheet pan…), or style (vegetarian, vegan, gluten-free, quick, low lift, one skillet, meal prep). Never tag minor ingredients.
 Return only valid JSON, no markdown.`,
     }],
   })

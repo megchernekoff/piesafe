@@ -30,7 +30,9 @@ Default to ${servings} servings.${toddlerMode ? ' Include toddler_notes when rel
 
 Whenever you have a recipe to suggest (even a first draft), include it at the end of your message inside <recipe>...</recipe> tags. Update the recipe JSON whenever the user asks for changes — always include the latest version.
 
-<recipe>{"title":"...","description":"one appetising sentence","ingredients":["amount ingredient",...],"instructions":["Step 1.","Step 2."...],"prep_time":15,"cook_time":30,"servings":${servings},"tags":["tag1"]${toddlerMode ? ',"toddler_notes":null' : ''}}</recipe>
+<recipe>{"title":"...","description":"one appetising sentence","ingredients":["amount ingredient",...],"instructions":["Step 1.","Step 2."...],"prep_time":15,"cook_time":30,"servings":${servings},"tags":["chicken","one pot"]${toddlerMode ? ',"toddler_notes":null' : ''}}</recipe>
+
+Tags: 2-4 max. Use only: main protein/ingredient (beef, chicken, pork, fish, pasta, beans, eggs, tofu…), dish type (soup, salad, stew, side dish, main dish, one pot, sheet pan…), or style (vegetarian, vegan, gluten-free, quick, low lift, one skillet, meal prep). Never tag minor ingredients.
 
 The <recipe> block is hidden from the user — your message text is what they see. Don't describe the JSON or tell them to look at it.`
 

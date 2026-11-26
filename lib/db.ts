@@ -142,4 +142,5 @@ export async function initializeSchema() {
   // Migrations — safe to re-run; errors mean the column already exists
   await db.execute(`ALTER TABLE profiles ADD COLUMN tour_complete INTEGER NOT NULL DEFAULT 0`).catch(() => {})
   await db.execute(`ALTER TABLE recipes ADD COLUMN notes TEXT`).catch(() => {})
+  await db.execute(`ALTER TABLE cooking_tips ADD COLUMN submitter TEXT`).catch(() => {})
 }

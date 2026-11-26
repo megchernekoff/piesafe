@@ -392,8 +392,8 @@ export default function RecipesPage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
 
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [importingPhoto, setImportingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -438,21 +438,29 @@ export default function RecipesPage() {
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageFile(file)
+    const incoming = Array.from(e.target.files || [])
+    if (!incoming.length) return
     setPhotoError('')
-    const reader = new FileReader()
-    reader.onload = ev => setImagePreview(ev.target?.result as string)
-    reader.readAsDataURL(file)
+    setImageFiles(prev => [...prev, ...incoming])
+    incoming.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = ev => setImagePreviews(prev => [...prev, ev.target?.result as string])
+      reader.readAsDataURL(file)
+    })
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function removeImage(index: number) {
+    setImageFiles(prev => prev.filter((_, i) => i !== index))
+    setImagePreviews(prev => prev.filter((_, i) => i !== index))
   }
 
   async function handleImportPhoto() {
-    if (!imageFile) return
+    if (!imageFiles.length) return
     setImportingPhoto(true)
     setPhotoError('')
     const form = new FormData()
-    form.append('image', imageFile)
+    imageFiles.forEach(f => form.append('images', f))
     const res = await fetch('/api/import-image', { method: 'POST', body: form })
     const data = await res.json()
     if (data.duplicate) {
@@ -460,9 +468,8 @@ export default function RecipesPage() {
     } else if (data.error) {
       setPhotoError(data.error)
     } else {
-      setImageFile(null)
-      setImagePreview(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      setImageFiles([])
+      setImagePreviews([])
       load()
     }
     setImportingPhoto(false)
@@ -598,57 +605,68 @@ export default function RecipesPage() {
 
         {importTab === 'photo' && (
           <div>
-            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Upload a photo of a recipe</div>
+            <div className="section-label" style={{ marginBottom: '0.75rem' }}>Upload photos of a recipe</div>
             <p style={{ fontSize: '0.82rem', color: 'var(--ink-light)', marginBottom: '0.75rem' }}>
-              Works with cookbook pages, recipe cards, handwritten notes, or screenshots.
+              Cookbook pages, recipe cards, handwritten notes, screenshots. Add multiple pages and they'll be combined.
             </p>
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                border: '2px dashed var(--stone-dark)',
-                borderRadius: 10,
-                padding: '2rem',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: imagePreview ? 'transparent' : 'var(--stone)',
-                marginBottom: '0.75rem',
-              }}
-              onDragOver={e => e.preventDefault()}
-              onDrop={e => {
-                e.preventDefault()
-                const file = e.dataTransfer.files[0]
-                if (file) {
-                  setImageFile(file)
+
+            {/* Thumbnails */}
+            {imagePreviews.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {imagePreviews.map((src, i) => (
+                  <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={src} alt={`page ${i + 1}`}
+                      style={{ height: 90, width: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--stone-dark)' }} />
+                    <button onClick={() => removeImage(i)}
+                      style={{ position: 'absolute', top: -6, right: -6, background: 'var(--lavender)', border: 'none', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
+                      <X size={10} />
+                    </button>
+                    <div style={{ fontSize: '0.65rem', textAlign: 'center', color: 'var(--ink-light)', marginTop: 2 }}>p.{i + 1}</div>
+                  </div>
+                ))}
+                {/* Add more */}
+                <button onClick={() => fileInputRef.current?.click()}
+                  style={{ height: 90, width: 70, border: '2px dashed var(--stone-dark)', borderRadius: 6, background: 'var(--stone)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-light)', fontSize: '1.5rem' }}>
+                  +
+                </button>
+              </div>
+            )}
+
+            {/* Drop zone — only shown when no images yet */}
+            {imagePreviews.length === 0 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault()
+                  const incoming = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+                  if (!incoming.length) return
                   setPhotoError('')
-                  const reader = new FileReader()
-                  reader.onload = ev => setImagePreview(ev.target?.result as string)
-                  reader.readAsDataURL(file)
-                }
-              }}
-            >
-              {imagePreview ? (
-                <img src={imagePreview} alt="preview"
-                  style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 8, margin: '0 auto', display: 'block' }} />
-              ) : (
-                <>
-                  <Upload size={28} style={{ color: 'var(--ochre)', margin: '0 auto 0.5rem', display: 'block' }} />
-                  <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)' }}>Click to choose a photo, or drag one here</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>JPG, PNG, WEBP</p>
-                </>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+                  setImageFiles(prev => [...prev, ...incoming])
+                  incoming.forEach(file => {
+                    const reader = new FileReader()
+                    reader.onload = ev => setImagePreviews(prev => [...prev, ev.target?.result as string])
+                    reader.readAsDataURL(file)
+                  })
+                }}
+                style={{ border: '2px dashed var(--stone-dark)', borderRadius: 10, padding: '2rem', textAlign: 'center', cursor: 'pointer', background: 'var(--stone)', marginBottom: '0.75rem' }}
+              >
+                <Upload size={28} style={{ color: 'var(--ochre)', margin: '0 auto 0.5rem', display: 'block' }} />
+                <p style={{ fontSize: '0.875rem', color: 'var(--ink-light)' }}>Click or drag photos here</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', marginTop: '0.25rem' }}>You can add multiple pages</p>
+              </div>
+            )}
+
+            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileChange} />
+
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn-primary" onClick={handleImportPhoto} disabled={importingPhoto || !imageFile}>
+              <button className="btn-primary" onClick={handleImportPhoto} disabled={importingPhoto || !imageFiles.length}>
                 {importingPhoto
                   ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Reading recipe…</>
-                  : <><Camera size={14} /> Import from photo</>}
+                  : <><Camera size={14} /> Import {imageFiles.length > 1 ? `${imageFiles.length} pages` : 'photo'}</>}
               </button>
-              {imagePreview && (
-                <button className="btn-secondary" onClick={() => {
-                  setImageFile(null); setImagePreview(null)
-                  if (fileInputRef.current) fileInputRef.current.value = ''
-                }}>Clear</button>
+              {imageFiles.length > 0 && (
+                <button className="btn-secondary" onClick={() => { setImageFiles([]); setImagePreviews([]) }}>Clear all</button>
               )}
             </div>
             {photoError && (

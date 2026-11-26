@@ -18,12 +18,21 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const formData = await req.formData()
-  const file = formData.get('image') as File | null
-  if (!file) return NextResponse.json({ error: 'No image provided' }, { status: 400 })
+  const files = formData.getAll('images') as File[]
+  if (files.length === 0) return NextResponse.json({ error: 'No images provided' }, { status: 400 })
 
-  const bytes = await file.arrayBuffer()
-  const base64 = Buffer.from(bytes).toString('base64')
-  const mediaType = (file.type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  const imageBlocks = await Promise.all(
+    files.map(async (file) => {
+      const bytes = await file.arrayBuffer()
+      const base64 = Buffer.from(bytes).toString('base64')
+      const mediaType = (file.type || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+      return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data: base64 } }
+    })
+  )
+
+  const pageNote = files.length > 1
+    ? `These ${files.length} images are consecutive pages of the same recipe. Combine them into one complete recipe.`
+    : 'This image may be a photo of a cookbook page, recipe card, handwritten note, or screenshot.'
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -31,13 +40,10 @@ export async function POST(req: NextRequest) {
     messages: [{
       role: 'user',
       content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: mediaType, data: base64 },
-        },
+        ...imageBlocks,
         {
           type: 'text',
-          text: `Extract the recipe from this image. It may be a photo of a cookbook page, recipe card, handwritten note, or screenshot.
+          text: `Extract the recipe from ${files.length > 1 ? 'these images' : 'this image'}. ${pageNote}
 
 Return a JSON object with exactly these fields:
 {
@@ -51,7 +57,7 @@ Return a JSON object with exactly these fields:
   "tags": ["vegetarian", "quick", ...]
 }
 
-If any field isn't visible in the image, use null for numbers or [] for arrays.
+If any field isn't visible, use null for numbers or [] for arrays.
 Return only valid JSON, no markdown, no extra text.`,
         },
       ],
